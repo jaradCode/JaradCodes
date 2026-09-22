@@ -184,6 +184,7 @@
     width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
   .chat-msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
   .msg{max-width:80%;padding:9px 13px;border-radius:14px;font-size:.88rem;line-height:1.4;word-break:break-word;}
+  .msg-name{font-size:.68rem;font-weight:700;opacity:.65;margin-bottom:2px;}
   .msg.me{align-self:flex-end;background:linear-gradient(135deg,var(--gold),#ffb238);color:#3a2400;border-bottom-right-radius:4px;}
   .msg.them{align-self:flex-start;background:rgba(255,255,255,.1);border-bottom-left-radius:4px;}
   .msg.sys{align-self:center;color:var(--ink-dim);font-size:.75rem;background:none;}
@@ -642,10 +643,19 @@ function render(){
 /* ---------------- chat ---------------- */
 const chatMsgs=document.getElementById('chatMsgs');
 function addChatMsg(text, mine){
-  const d=document.createElement('div');
-  d.className='msg '+(mine?'me':'them');
-  d.textContent=text;
-  chatMsgs.appendChild(d);
+  const wrap=document.createElement('div');
+  wrap.className='msg '+(mine?'me':'them');
+
+  const label=document.createElement('div');
+  label.className='msg-name';
+  label.textContent = mine ? myName : theirName;
+
+  const bubble=document.createElement('div');
+  bubble.textContent=text;
+
+  wrap.appendChild(label);
+  wrap.appendChild(bubble);
+  chatMsgs.appendChild(wrap);
   chatMsgs.scrollTop=999999;
   if(!mine && document.getElementById('chatPanel').classList.contains('hidden')){
     unread++; updateBadge();
