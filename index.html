@@ -110,6 +110,26 @@
   }
   hr.sep{border:none; border-top:1px solid #3730a3; margin:20px 0;}
 
+  .music-panel{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:16px;
+    padding:14px;
+    max-width:440px;
+    width:100%;
+    margin-bottom:18px;
+    box-shadow:0 10px 40px rgba(0,0,0,0.4);
+  }
+  .music-label{font-size:0.85rem; color:var(--accent); font-weight:700; margin-bottom:8px;}
+
+  .help-text{
+    font-size:0.78rem;
+    color:var(--muted);
+    text-align:center;
+    margin-bottom:12px;
+    line-height:1.4;
+  }
+
   /* ---------- Game layout ---------- */
   #game{
     display:none;
@@ -410,6 +430,11 @@
 <h1>J.Codes.Fun</h1>
 <div class="subtitle">Jarad &amp; Nikiwe's private game night 🎮 — four games, one winner each round, no mercy.</div>
 
+<div class="music-panel">
+  <div class="music-label">🎵 Set the mood</div>
+  <iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/5DxbxwRXl0zYyEf7qf0Skv?utm_source=generator&theme=0" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+</div>
+
 <div id="lobby">
   <div class="lobby-section">
     <h3>① Enter your name</h3>
@@ -455,6 +480,7 @@
       <!-- Connect 4 -->
       <div id="panel-c4" class="board-panel active">
         <div class="turn-banner" id="c4TurnBanner">Connecting...</div>
+        <div class="help-text">Click a column to drop your piece. First to connect 4 in a row (any direction — up, across, or diagonal) wins the round.</div>
         <div id="c4Board"></div>
         <div class="players-row">
           <div class="player-chip"><span class="dot red"></span><span id="c4P1">Player 1</span></div>
@@ -470,6 +496,7 @@
       <!-- Ludo -->
       <div id="panel-ludo" class="board-panel">
         <div class="turn-banner" id="ludoTurnBanner">Connecting...</div>
+        <div class="help-text">Roll a 6 to bring a token out of your yard. Move it around the ring — land on their token to send it back to their yard. Get all 4 tokens fully Home first to win the race.</div>
         <div class="ludo-ring" id="ludoRing"></div>
         <button class="btn-primary" id="ludoRollBtn">Roll Dice</button>
         <div class="ludo-info-row">
@@ -484,6 +511,7 @@
       <!-- Tic Tac Toe -->
       <div id="panel-ttt" class="board-panel">
         <div class="turn-banner" id="tttTurnBanner">Connecting...</div>
+        <div class="help-text">Take turns placing your symbol. Get 3 in a row to win a round — first to 3 round wins takes the whole match.</div>
         <div id="tttBoard"></div>
         <div class="players-row">
           <div class="player-chip">You are <span id="tttMySymbol">-</span></div>
@@ -499,6 +527,7 @@
       <!-- Speed Tap -->
       <div id="panel-tap" class="board-panel">
         <div class="turn-banner" id="tapBanner">First to 5 wins the duel ⚡</div>
+        <div class="help-text">Both hit "I'm Ready". Wait for the box to flash green, then tap it as fast as you can. Tap before it turns green and you lose the round automatically.</div>
         <div class="tap-area" id="tapArea">Click "I'm Ready" to begin</div>
         <div class="controls-row">
           <button class="btn-primary" id="tapReadyBtn">I'm Ready</button>
