@@ -762,6 +762,68 @@
     overallBoard.textContent = 'Overall — You: ' + overallScore.me + ' · Opponent: ' + overallScore.them;
   }
 
+  // PeerJS connection settings.
+  // The extra TURN servers are important when two players are on different
+  // networks and direct WebRTC/NAT traversal fails.
+  const PEER_OPTIONS = {
+    debug: 1,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:openrelay.metered.ca:80' },
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
+      ],
+      sdpSemantics: 'unified-plan'
+    }
+  };
+
+  let connectionTimer = null;
+
+  function normalizeRoomCode(value){
+    let code = String(value || '').trim();
+    if(!code) return '';
+    try {
+      if(code.indexOf('://') !== -1) {
+        const u = new URL(code);
+        code = u.searchParams.get('join') || code;
+      }
+    } catch(e) {}
+    return code.trim();
+  }
+
+  function clearConnectionTimer(){
+    if(connectionTimer){
+      clearTimeout(connectionTimer);
+      connectionTimer = null;
+    }
+  }
+
+  function failConnection(message){
+    clearConnectionTimer();
+    setLobbyStatus(message);
+    createBtn.disabled = false;
+    joinBtn.disabled = false;
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const autoJoin = urlParams.get('join');
   if(autoJoin){ joinInput.value = autoJoin; }
@@ -774,7 +836,7 @@
     createBtn.disabled = true;
     setLobbyStatus('Setting up your game...');
     const id = 'c4-' + makeId(6);
-    peer = new Peer(id, { debug: 0 });
+    peer = new Peer(id, PEER_OPTIONS);
 
     peer.on('open', (id) => {
       const url = window.location.origin + window.location.pathname + '?join=' + id;
@@ -790,19 +852,27 @@
     });
 
     peer.on('connection', (c) => {
+      if(conn && conn.open) {
+        c.close();
+        return;
+      }
       conn = c;
       setupConnection();
     });
 
+    peer.on('disconnected', () => {
+      setLobbyStatus('Connection server disconnected. Reconnecting...');
+      try { peer.reconnect(); } catch(e) {}
+    });
+
     peer.on('error', (err) => {
-      setLobbyStatus('Error: ' + err.type + '. Please refresh and try again.');
-      createBtn.disabled = false;
+      failConnection('Connection error: ' + (err.type || 'unknown') + '. Try creating a new game.');
     });
   });
 
   joinBtn.addEventListener('click', () => {
-    const code = joinInput.value.trim();
-    if(!code){ setLobbyStatus('Please enter a game code.'); return; }
+    const code = normalizeRoomCode(joinInput.value);
+    if(!code){ setLobbyStatus('Please enter a game code or invitation link.'); return; }
     myName = nameInput.value.trim() || 'Player 2';
     localStorage.setItem('jcf_name', myName);
     isHost = false;
@@ -810,34 +880,65 @@
     joinBtn.disabled = true;
     setLobbyStatus('Connecting...');
 
-    peer = new Peer(undefined, { debug: 0 });
+    peer = new Peer(undefined, PEER_OPTIONS);
     peer.on('open', () => {
-      conn = peer.connect(code, { reliable: true });
+      conn = peer.connect(code, {
+        reliable: true,
+        serialization: 'json'
+      });
+
+      connectionTimer = setTimeout(() => {
+        if(!conn || !conn.open){
+          try { conn && conn.close(); } catch(e) {}
+          failConnection('Connection timed out. Both players should try again with a fresh game link.');
+        }
+      }, 25000);
+
       conn.on('open', () => {
+        clearConnectionTimer();
         setupConnection();
         conn.send({ type: 'hello', name: myName });
       });
-      conn.on('error', () => {
-        setLobbyStatus('Could not find that game. Check the code and try again.');
-        joinBtn.disabled = false;
+      conn.on('error', (err) => {
+        failConnection('Could not connect to that game (' + (err && err.type ? err.type : 'network error') + '). Check the link and try again.');
       });
     });
+    peer.on('disconnected', () => {
+      setLobbyStatus('Connection server disconnected. Reconnecting...');
+      try { peer.reconnect(); } catch(e) {}
+    });
     peer.on('error', (err) => {
-      setLobbyStatus('Error: ' + err.type + '. Please refresh and try again.');
-      joinBtn.disabled = false;
+      failConnection('Connection error: ' + (err.type || 'unknown') + '. Check the game link and try again.');
     });
   });
 
   function setupConnection(){
-    conn.on('open', () => {
-      if(isHost){ conn.send({ type: 'hello', name: myName }); }
+    clearConnectionTimer();
+
+    const onOpen = () => {
+      clearConnectionTimer();
+      if(isHost){
+        conn.send({ type: 'hello', name: myName });
+      }
       startGame();
-    });
+    };
+
+    conn.on('open', onOpen);
     conn.on('data', handleData);
     conn.on('close', () => {
+      clearConnectionTimer();
       addSystemMsg(theirName + ' disconnected.');
+      if(gameEl.style.display !== 'block'){
+        failConnection('The other player disconnected before the game started.');
+      }
     });
-    if(conn.open){ startGame(); }
+    conn.on('error', (err) => {
+      if(gameEl.style.display !== 'block'){
+        failConnection('Peer connection error. Please create a new link and try again.');
+      }
+    });
+
+    if(conn.open) onOpen();
   }
 
   function startGame(){
