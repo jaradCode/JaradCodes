@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>J.Codes.Fun — Four in a Row</title>
+<title>J.Codes.Fun — Game Night</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 <style>
   :root{
@@ -115,9 +115,25 @@
     display:none;
     width:100%;
     max-width:1000px;
-    gap:20px;
+  }
+  .game-tabs{
+    display:flex;
+    gap:8px;
     flex-wrap:wrap;
-    justify-content:center;
+    margin-bottom:14px;
+  }
+  .tab-btn{
+    flex:1 1 100px;
+    background:#25204a;
+    color:var(--muted);
+    font-size:0.82rem;
+    padding:10px 6px;
+    border-radius:10px;
+    font-weight:700;
+  }
+  .tab-btn.active{
+    background:linear-gradient(90deg, var(--accent), #6366f1);
+    color:white;
   }
   .game-wrap{
     display:flex;
@@ -127,15 +143,21 @@
     justify-content:center;
     align-items:flex-start;
   }
+  .game-main{
+    flex:1 1 420px;
+    max-width:480px;
+    display:flex;
+    flex-direction:column;
+  }
   .board-panel{
     background:var(--panel);
     border:1px solid var(--panel-border);
     border-radius:16px;
     padding:18px;
     box-shadow:0 10px 40px rgba(0,0,0,0.4);
-    flex:1 1 420px;
-    max-width:480px;
+    display:none;
   }
+  .board-panel.active{display:block;}
   .turn-banner{
     text-align:center;
     font-weight:700;
@@ -148,8 +170,13 @@
   .turn-you{background:rgba(129,140,248,0.25); color:#c7d2fe;}
   .turn-them{background:rgba(148,163,184,0.15); color:var(--muted);}
   .turn-over{background:rgba(244,114,182,0.25); color:#fbcfe8;}
+  @keyframes pulseWin{0%{transform:scale(1);}50%{transform:scale(1.04);}100%{transform:scale(1);}}
+  .celebrate{animation:pulseWin 0.7s ease-in-out infinite;}
 
-  #board{
+  .score-line{text-align:center; color:var(--muted); font-size:0.85rem; margin-top:10px;}
+
+  /* Connect 4 */
+  #c4Board{
     display:grid;
     grid-template-columns:repeat(7, 1fr);
     gap:8px;
@@ -202,6 +229,116 @@
 
   .controls-row{display:flex; gap:10px; margin-top:14px;}
   .controls-row button{flex:1;}
+
+  /* Tic Tac Toe */
+  #tttBoard{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    background:#1e1b4b;
+    padding:10px;
+    border-radius:12px;
+    border:2px solid #4338ca;
+    max-width:280px;
+    margin:0 auto;
+  }
+  .ttt-cell{
+    aspect-ratio:1/1;
+    background:#0f0c29;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:2.2rem;
+    font-weight:800;
+    cursor:pointer;
+  }
+  .ttt-cell.x{color:var(--accent);}
+  .ttt-cell.o{color:var(--accent2);}
+  .ttt-cell.win{box-shadow:inset 0 0 0 3px #fff;}
+  .ttt-cell.disabled{cursor:default;}
+
+  /* Ludo */
+  .ludo-ring{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(11,1fr);
+    grid-template-rows:repeat(11,26px);
+    gap:2px;
+    background:#1e1b4b;
+    padding:8px;
+    border-radius:12px;
+    border:2px solid #4338ca;
+    max-width:420px;
+    margin:0 auto;
+  }
+  .ludo-cell{
+    background:#0f0c29;
+    border-radius:4px;
+    position:relative;
+  }
+  .ludo-cell.safe{box-shadow:inset 0 0 0 2px #fbbf24;}
+  .ludo-cell.start-red{background:#7f1d1d;}
+  .ludo-cell.start-yellow{background:#78350f;}
+  .ludo-center{
+    grid-column:2 / 11;
+    grid-row:2 / 11;
+    background:radial-gradient(circle, #312e81 0%, #1e1b4b 70%);
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+  }
+  .ludo-center-dice{font-size:2.4rem;}
+  .ludo-center-turn{font-size:0.8rem; color:var(--muted); margin-top:6px; text-align:center;}
+  .ludo-token{
+    position:absolute;
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    border:2px solid white;
+    box-shadow:0 2px 4px rgba(0,0,0,.5);
+    top:50%; left:50%;
+  }
+  .ludo-token.red{background:var(--red);}
+  .ludo-token.yellow{background:var(--yellow);}
+  #ludoRollBtn{margin-top:12px;}
+  .ludo-info-row{display:flex; gap:10px; margin-top:14px;}
+  .ludo-side{flex:1; background:#161327; border-radius:10px; padding:10px;}
+  .ludo-side h4{margin:0 0 8px; font-size:0.85rem;}
+  .ludo-tokens{display:flex; gap:6px; flex-wrap:wrap;}
+  .ludo-token-btn{
+    width:36px; height:36px; border-radius:50%;
+    border:2px solid #444; background:#0f0c29; color:#fff;
+    font-size:0.62rem; display:flex; align-items:center; justify-content:center;
+    cursor:default; text-align:center; line-height:1;
+  }
+  .ludo-token-btn.movable{cursor:pointer; box-shadow:0 0 0 3px #fbbf24;}
+  .ludo-token-btn.red-tok{border-color:var(--red);}
+  .ludo-token-btn.yellow-tok{border-color:var(--yellow);}
+  .ludo-token-btn.home{background:#166534;}
+
+  /* Speed Tap */
+  .tap-area{
+    height:190px;
+    border-radius:14px;
+    background:#0f0c29;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.15rem;
+    font-weight:700;
+    text-align:center;
+    padding:16px;
+    cursor:pointer;
+    user-select:none;
+    transition:background .15s;
+  }
+  .tap-area.countdown{background:#7f1d1d;}
+  .tap-area.live{background:#166534; font-size:2rem;}
+  .tap-area.falsestart{background:#7f1d1d;}
+  .tap-area.result{background:#312e81;}
 
   /* ---------- Chat ---------- */
   .chat-panel{
@@ -271,7 +408,7 @@
 <body>
 
 <h1>J.Codes.Fun</h1>
-<div class="subtitle">🔴 Four in a Row 🟡 — Jarad &amp; Nikiwe's private 2-player game with live chat.</div>
+<div class="subtitle">Jarad &amp; Nikiwe's private game night 🎮 — four games, one winner each round, no mercy.</div>
 
 <div id="lobby">
   <div class="lobby-section">
@@ -289,14 +426,14 @@
         <input type="text" id="roomCode" readonly>
         <button class="copy-btn" id="copyBtn">Copy Link</button>
       </div>
-      <div class="status-line">Send this link to Nikiwe and wait for her to join.</div>
+      <div class="status-line">Send this link over and wait for them to join.</div>
     </div>
   </div>
 
   <hr class="sep">
 
   <div class="lobby-section">
-    <h3>③ ...or join Nikiwe's game</h3>
+    <h3>③ ...or join</h3>
     <input type="text" id="joinInput" placeholder="Paste game code here">
     <button class="btn-secondary" id="joinBtn">Join Game</button>
   </div>
@@ -305,17 +442,71 @@
 </div>
 
 <div id="game">
+  <div class="game-tabs">
+    <button class="tab-btn active" data-game="c4">🔴🟡 Connect 4</button>
+    <button class="tab-btn" data-game="ludo">🎲 Ludo</button>
+    <button class="tab-btn" data-game="ttt">❌⭕ Tic-Tac-Toe</button>
+    <button class="tab-btn" data-game="tap">⚡ Speed Tap</button>
+  </div>
+
   <div class="game-wrap">
-    <div class="board-panel">
-      <div class="turn-banner" id="turnBanner">Connecting...</div>
-      <div id="board"></div>
-      <div class="players-row">
-        <div class="player-chip"><span class="dot red"></span><span id="p1name">Player 1</span></div>
-        <div class="player-chip"><span id="p2name">Player 2</span><span class="dot yellow"></span></div>
+    <div class="game-main">
+
+      <!-- Connect 4 -->
+      <div id="panel-c4" class="board-panel active">
+        <div class="turn-banner" id="c4TurnBanner">Connecting...</div>
+        <div id="c4Board"></div>
+        <div class="players-row">
+          <div class="player-chip"><span class="dot red"></span><span id="c4P1">Player 1</span></div>
+          <div class="player-chip"><span id="c4P2">Player 2</span><span class="dot yellow"></span></div>
+        </div>
+        <div class="score-line" id="c4ScoreLine">Wins — You: 0 · Opponent: 0</div>
+        <div class="controls-row">
+          <button class="btn-secondary" id="c4RematchBtn">🔄 Rematch</button>
+          <button class="btn-secondary" id="c4ResetBtn">♻️ Reset Score</button>
+        </div>
       </div>
-      <div class="controls-row">
-        <button class="btn-secondary" id="rematchBtn">🔄 Rematch</button>
+
+      <!-- Ludo -->
+      <div id="panel-ludo" class="board-panel">
+        <div class="turn-banner" id="ludoTurnBanner">Connecting...</div>
+        <div class="ludo-ring" id="ludoRing"></div>
+        <button class="btn-primary" id="ludoRollBtn">Roll Dice</button>
+        <div class="ludo-info-row">
+          <div class="ludo-side"><h4>🔴 Red</h4><div class="ludo-tokens" id="ludoRedTokens"></div></div>
+          <div class="ludo-side"><h4>🟡 Yellow</h4><div class="ludo-tokens" id="ludoYellowTokens"></div></div>
+        </div>
+        <div class="controls-row">
+          <button class="btn-secondary" id="ludoRematchBtn">🔄 New Race</button>
+        </div>
       </div>
+
+      <!-- Tic Tac Toe -->
+      <div id="panel-ttt" class="board-panel">
+        <div class="turn-banner" id="tttTurnBanner">Connecting...</div>
+        <div id="tttBoard"></div>
+        <div class="players-row">
+          <div class="player-chip">You are <span id="tttMySymbol">-</span></div>
+          <div class="player-chip">Opponent is <span id="tttOppSymbol">-</span></div>
+        </div>
+        <div class="score-line" id="tttScoreLine">First to 3 wins the match — 0 : 0</div>
+        <div class="controls-row">
+          <button class="btn-secondary" id="tttRematchBtn">🔄 New Round</button>
+          <button class="btn-secondary" id="tttResetBtn">♻️ Reset Match</button>
+        </div>
+      </div>
+
+      <!-- Speed Tap -->
+      <div id="panel-tap" class="board-panel">
+        <div class="turn-banner" id="tapBanner">First to 5 wins the duel ⚡</div>
+        <div class="tap-area" id="tapArea">Click "I'm Ready" to begin</div>
+        <div class="controls-row">
+          <button class="btn-primary" id="tapReadyBtn">I'm Ready</button>
+          <button class="btn-secondary" id="tapNextBtn" style="display:none;">Next Round</button>
+        </div>
+        <div class="score-line" id="tapScoreLine">Score — You: 0 · Opponent: 0</div>
+      </div>
+
     </div>
 
     <div class="chat-panel">
@@ -329,20 +520,19 @@
   </div>
 </div>
 
-<footer>J.Codes.Fun · a direct connection between you and Nikiwe's browser.</footer>
+<footer>Game night, just the two of you. 🎮💘</footer>
 
 <script>
 (function(){
-  const ROWS = 6, COLS = 7;
-  let myColor = null;       // 'red' (host) or 'yellow' (joiner)
+  "use strict";
+  let myColor = null;       // 'red' (host) or 'yellow' (joiner) — used as shared identity across all games
+  let oppColor = null;
   let isHost = false;
   let peer = null;
   let conn = null;
   let myName = 'You';
   let theirName = 'Opponent';
-  let board = [];           // board[col] = array of 'red'/'yellow' bottom to top
-  let currentTurn = 'red';  // whose turn
-  let gameOver = false;
+  let currentGame = 'c4';
 
   const lobby = document.getElementById('lobby');
   const gameEl = document.getElementById('game');
@@ -354,11 +544,6 @@
   const roomCode = document.getElementById('roomCode');
   const copyBtn = document.getElementById('copyBtn');
   const lobbyStatus = document.getElementById('lobbyStatus');
-  const boardEl = document.getElementById('board');
-  const turnBanner = document.getElementById('turnBanner');
-  const p1name = document.getElementById('p1name');
-  const p2name = document.getElementById('p2name');
-  const rematchBtn = document.getElementById('rematchBtn');
   const messagesEl = document.getElementById('messages');
   const chatInput = document.getElementById('chatInput');
   const sendChatBtn = document.getElementById('sendChatBtn');
@@ -372,7 +557,6 @@
 
   function setLobbyStatus(text){ lobbyStatus.textContent = text; }
 
-  // Check URL for ?join=CODE to auto-fill
   const urlParams = new URLSearchParams(window.location.search);
   const autoJoin = urlParams.get('join');
   if(autoJoin){ joinInput.value = autoJoin; }
@@ -380,7 +564,7 @@
   createBtn.addEventListener('click', () => {
     myName = nameInput.value.trim() || 'Player 1';
     isHost = true;
-    myColor = 'red';
+    myColor = 'red'; oppColor = 'yellow';
     createBtn.disabled = true;
     setLobbyStatus('Setting up your game...');
     const id = 'c4-' + makeId(6);
@@ -390,7 +574,7 @@
       const url = window.location.origin + window.location.pathname + '?join=' + id;
       roomCode.value = id;
       shareArea.style.display = 'block';
-      setLobbyStatus('Waiting for Nikiwe to join...');
+      setLobbyStatus('Waiting for them to join...');
       copyBtn.onclick = () => {
         navigator.clipboard.writeText(url).then(()=>{
           copyBtn.textContent = 'Copied!';
@@ -415,7 +599,7 @@
     if(!code){ setLobbyStatus('Please enter a game code.'); return; }
     myName = nameInput.value.trim() || 'Player 2';
     isHost = false;
-    myColor = 'yellow';
+    myColor = 'yellow'; oppColor = 'red';
     joinBtn.disabled = true;
     setLobbyStatus('Connecting...');
 
@@ -439,132 +623,172 @@
 
   function setupConnection(){
     conn.on('open', () => {
-      if(isHost){
-        conn.send({ type: 'hello', name: myName });
-      }
+      if(isHost){ conn.send({ type: 'hello', name: myName }); }
       startGame();
     });
     conn.on('data', handleData);
     conn.on('close', () => {
       addSystemMsg(theirName + ' disconnected.');
-      turnBanner.textContent = 'Opponent disconnected';
-      turnBanner.className = 'turn-banner turn-over';
-      gameOver = true;
     });
-    // In case already open (host receiving)
     if(conn.open){ startGame(); }
   }
 
   function startGame(){
     lobby.style.display = 'none';
-    gameEl.style.display = 'flex';
-    initBoard();
-    render();
-    updateTurnBanner();
+    gameEl.style.display = 'block';
+    c4Init(); c4Render(); c4UpdateBanner();
+    tttInit(); tttRender();
+    ludoState = ludoFresh(); ludoRender();
+    tapReset(); tapRender();
+    switchTab('c4', false);
   }
 
   function handleData(data){
     if(data.type === 'hello'){
       theirName = data.name || theirName;
-      if(isHost){ p1name.textContent = myName + ' (You)'; p2name.textContent = theirName; }
-      else { p1name.textContent = theirName; p2name.textContent = myName + ' (You)'; }
+      c4P1.textContent = isHost ? myName+' (You)' : theirName;
+      c4P2.textContent = isHost ? theirName : myName+' (You)';
       addSystemMsg(theirName + ' joined the game!');
-    } else if(data.type === 'move'){
-      applyMove(data.col, false);
     } else if(data.type === 'chat'){
       addMsg(data.text, 'them');
-    } else if(data.type === 'rematch'){
-      initBoard();
-      render();
-      updateTurnBanner();
-      addSystemMsg('New round started.');
+    } else if(data.type === 'switchGame'){
+      switchTab(data.game, false);
+    } else if(data.type === 'c4Move'){
+      c4ApplyMove(data.col, false);
+    } else if(data.type === 'c4Rematch'){
+      c4Init(); c4Render(); c4UpdateBanner();
+      addSystemMsg('New Connect 4 round started.');
+    } else if(data.type === 'c4ResetScore'){
+      c4Score = {red:0, yellow:0}; c4RenderScore();
+    } else if(data.type === 'tttMove'){
+      tttApplyMove(data.idx, false);
+    } else if(data.type === 'tttRematch'){
+      tttBoard = Array(9).fill(null); tttTurn='X'; tttOver=false; tttRender();
+      addSystemMsg('New Tic-Tac-Toe round started.');
+    } else if(data.type === 'tttReset'){
+      tttScore = {X:0,O:0}; tttOver=false; tttBoard=Array(9).fill(null); tttTurn='X'; tttRender();
+    } else if(data.type === 'ludoState'){
+      ludoState = data.state; ludoRender();
+    } else if(data.type === 'ludoRematch'){
+      ludoState = ludoFresh(); ludoRender();
+      addSystemMsg('New Ludo race started.');
+    } else if(data.type === 'tapReady'){
+      tapReadyThem = true; tapMaybeStart();
+    } else if(data.type === 'tapGo'){
+      tapBeginCountdown(data.delay);
+    } else if(data.type === 'tapResult'){
+      tapTheirResult = data.falseStart ? 'FALSE' : data.time;
+      tapMaybeFinish();
+    } else if(data.type === 'tapNext'){
+      tapReset(); tapRender();
     }
   }
 
-  function initBoard(){
-    board = [];
-    for(let c=0;c<COLS;c++) board.push([]);
-    currentTurn = 'red';
-    gameOver = false;
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.game, true));
+  });
+  function switchTab(game, broadcast){
+    document.querySelectorAll('.board-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('panel-'+game).classList.add('active');
+    document.querySelector('.tab-btn[data-game="'+game+'"]').classList.add('active');
+    currentGame = game;
+    if(broadcast && conn && conn.open) conn.send({type:'switchGame', game});
   }
 
-  function render(){
-    boardEl.innerHTML = '';
+  // ================= CONNECT 4 =================
+  const ROWS=6, COLS=7;
+  const c4Board = document.getElementById('c4Board');
+  const c4TurnBanner = document.getElementById('c4TurnBanner');
+  const c4P1 = document.getElementById('c4P1');
+  const c4P2 = document.getElementById('c4P2');
+  const c4ScoreLine = document.getElementById('c4ScoreLine');
+  let c4Grid = [], c4Turn = 'red', c4Over = false;
+  let c4Score = {red:0, yellow:0};
+
+  function c4Init(){
+    c4Grid = [];
+    for(let c=0;c<COLS;c++) c4Grid.push([]);
+    c4Turn = 'red'; c4Over = false;
+    c4TurnBanner.classList.remove('celebrate');
+  }
+
+  function c4Render(){
+    c4Board.innerHTML = '';
     for(let c=0;c<COLS;c++){
       const colEl = document.createElement('div');
-      colEl.className = 'col' + ((gameOver || currentTurn!==myColor) ? ' disabled':'');
+      colEl.className = 'col' + ((c4Over || c4Turn!==myColor) ? ' disabled':'');
       colEl.dataset.col = c;
       for(let r=0;r<ROWS;r++){
         const cell = document.createElement('div');
         cell.className = 'cell';
-        const val = board[c][r];
+        const val = c4Grid[c][r];
         if(val) cell.classList.add(val);
         colEl.appendChild(cell);
       }
-      colEl.addEventListener('click', onColClick);
-      boardEl.appendChild(colEl);
+      colEl.addEventListener('click', c4OnClick);
+      c4Board.appendChild(colEl);
     }
   }
 
-  function onColClick(e){
-    if(gameOver) return;
-    if(currentTurn !== myColor) return;
+  function c4OnClick(e){
+    if(c4Over) return;
+    if(c4Turn !== myColor) return;
     const c = parseInt(e.currentTarget.dataset.col, 10);
-    if(board[c].length >= ROWS) return;
-    applyMove(c, true);
+    if(c4Grid[c].length >= ROWS) return;
+    c4ApplyMove(c, true);
   }
 
-  function applyMove(col, isMine){
-    if(board[col].length >= ROWS) return;
-    const color = currentTurn;
-    board[col].push(color);
-    if(isMine && conn && conn.open){
-      conn.send({ type: 'move', col: col });
-    }
-    render();
-    const win = checkWin(col, board[col].length - 1, color);
+  function c4ApplyMove(col, isMine){
+    if(c4Grid[col].length >= ROWS) return;
+    const color = c4Turn;
+    c4Grid[col].push(color);
+    if(isMine && conn && conn.open) conn.send({ type: 'c4Move', col: col });
+    c4Render();
+    const win = c4CheckWin(col, c4Grid[col].length - 1, color);
     if(win){
-      gameOver = true;
-      highlightWin(win);
+      c4Over = true;
+      c4Highlight(win);
       const winnerName = (color === myColor) ? myName : theirName;
-      turnBanner.textContent = '🎉 ' + winnerName + ' wins!';
-      turnBanner.className = 'turn-banner turn-over';
+      c4Score[color] = (c4Score[color]||0) + 1;
+      c4RenderScore();
+      c4TurnBanner.textContent = '🎉 ' + winnerName + ' wins the round!';
+      c4TurnBanner.className = 'turn-banner turn-over celebrate';
       addSystemMsg(winnerName + ' won the round! Click Rematch to play again.');
       return;
     }
-    if(isBoardFull()){
-      gameOver = true;
-      turnBanner.textContent = "It's a draw!";
-      turnBanner.className = 'turn-banner turn-over';
+    if(c4Grid.every(colArr => colArr.length >= ROWS)){
+      c4Over = true;
+      c4TurnBanner.textContent = "It's a draw!";
+      c4TurnBanner.className = 'turn-banner turn-over';
       addSystemMsg('The board is full — a draw!');
       return;
     }
-    currentTurn = (currentTurn === 'red') ? 'yellow' : 'red';
-    updateTurnBanner();
+    c4Turn = (c4Turn === 'red') ? 'yellow' : 'red';
+    c4UpdateBanner();
   }
 
-  function isBoardFull(){
-    return board.every(colArr => colArr.length >= ROWS);
-  }
-
-  function updateTurnBanner(){
-    if(gameOver) return;
-    if(currentTurn === myColor){
-      turnBanner.textContent = "Your turn — drop a piece!";
-      turnBanner.className = 'turn-banner turn-you';
+  function c4UpdateBanner(){
+    if(c4Over) return;
+    if(c4Turn === myColor){
+      c4TurnBanner.textContent = "Your turn — drop a piece!";
+      c4TurnBanner.className = 'turn-banner turn-you';
     } else {
-      turnBanner.textContent = theirName + "'s turn...";
-      turnBanner.className = 'turn-banner turn-them';
+      c4TurnBanner.textContent = theirName + "'s turn...";
+      c4TurnBanner.className = 'turn-banner turn-them';
     }
-    render();
+    c4Render();
   }
 
-  function checkWin(col, row, color){
+  function c4RenderScore(){
+    const mine = c4Score[myColor]||0, theirs = c4Score[oppColor]||0;
+    c4ScoreLine.textContent = 'Wins — You: ' + mine + ' · Opponent: ' + theirs;
+  }
+
+  function c4CheckWin(col, row, color){
     const dirs = [
-      [[0,1],[0,-1]],   // vertical
-      [[1,0],[-1,0]],   // horizontal
-      [[1,1],[-1,-1]],  // diagonal /
-      [[1,-1],[-1,1]]   // diagonal \
+      [[0,1],[0,-1]], [[1,0],[-1,0]], [[1,1],[-1,-1]], [[1,-1],[-1,1]]
     ];
     for(const dirPair of dirs){
       let cells = [[col,row]];
@@ -573,7 +797,7 @@
         while(true){
           cc += dc; rr += dr;
           if(cc<0||cc>=COLS||rr<0||rr>=ROWS) break;
-          if(board[cc][rr] === color){ cells.push([cc,rr]); }
+          if(c4Grid[cc][rr] === color){ cells.push([cc,rr]); }
           else break;
         }
       }
@@ -582,21 +806,440 @@
     return null;
   }
 
-  function highlightWin(cells){
-    const colEls = boardEl.querySelectorAll('.col');
+  function c4Highlight(cells){
+    const colEls = c4Board.querySelectorAll('.col');
     for(const [c,r] of cells){
-      const colEl = colEls[c];
-      const cellEl = colEl.children[r];
-      cellEl.classList.add('win-cell');
+      colEls[c].children[r].classList.add('win-cell');
     }
   }
 
-  rematchBtn.addEventListener('click', () => {
-    initBoard();
-    render();
-    updateTurnBanner();
-    if(conn && conn.open) conn.send({ type: 'rematch' });
+  document.getElementById('c4RematchBtn').addEventListener('click', () => {
+    c4Init(); c4Render(); c4UpdateBanner();
+    if(conn && conn.open) conn.send({ type: 'c4Rematch' });
     addSystemMsg('You started a new round.');
+  });
+  document.getElementById('c4ResetBtn').addEventListener('click', () => {
+    c4Score = {red:0, yellow:0}; c4RenderScore();
+    if(conn && conn.open) conn.send({ type: 'c4ResetScore' });
+  });
+  c4RenderScore();
+
+  // ================= TIC TAC TOE =================
+  const tttBoardEl = document.getElementById('tttBoard');
+  const tttTurnBanner = document.getElementById('tttTurnBanner');
+  const tttMySymbolEl = document.getElementById('tttMySymbol');
+  const tttOppSymbolEl = document.getElementById('tttOppSymbol');
+  const tttScoreLine = document.getElementById('tttScoreLine');
+  let tttBoard = Array(9).fill(null);
+  let tttTurn = 'X';
+  let tttOver = false;
+  let tttScore = {X:0, O:0};
+  let mySymbol, oppSymbol;
+
+  function tttInit(){
+    mySymbol = isHost ? 'X' : 'O';
+    oppSymbol = isHost ? 'O' : 'X';
+    tttMySymbolEl.textContent = mySymbol;
+    tttOppSymbolEl.textContent = oppSymbol;
+  }
+
+  const TTT_WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+  function tttRender(){
+    tttBoardEl.innerHTML = '';
+    for(let i=0;i<9;i++){
+      const cell = document.createElement('div');
+      cell.className = 'ttt-cell' + (tttOver || tttTurn!==mySymbol || tttBoard[i] ? ' disabled' : '');
+      const v = tttBoard[i];
+      if(v){ cell.textContent = v; cell.classList.add(v.toLowerCase()); }
+      cell.addEventListener('click', () => tttOnClick(i));
+      tttBoardEl.appendChild(cell);
+    }
+    tttTurnBanner.classList.remove('celebrate');
+    if(!tttOver){
+      if(tttTurn === mySymbol){
+        tttTurnBanner.textContent = "Your turn — place " + mySymbol;
+        tttTurnBanner.className = 'turn-banner turn-you';
+      } else {
+        tttTurnBanner.textContent = theirName + "'s turn...";
+        tttTurnBanner.className = 'turn-banner turn-them';
+      }
+    }
+    tttScoreLine.textContent = 'First to 3 wins the match — You ' + tttScore[mySymbol] + ' : ' + tttScore[oppSymbol] + ' Opponent';
+  }
+
+  function tttOnClick(idx){
+    if(tttOver || tttTurn !== mySymbol || tttBoard[idx]) return;
+    tttApplyMove(idx, true);
+  }
+
+  function tttApplyMove(idx, isMine){
+    if(tttBoard[idx]) return;
+    const symbol = tttTurn;
+    tttBoard[idx] = symbol;
+    if(isMine && conn && conn.open) conn.send({type:'tttMove', idx: idx});
+    const winLine = TTT_WINS.find(line => line.every(i => tttBoard[i]===symbol));
+    if(winLine){
+      tttOver = true;
+      tttScore[symbol] = (tttScore[symbol]||0) + 1;
+      const winnerName = symbol===mySymbol ? myName : theirName;
+      tttRender();
+      winLine.forEach(i => tttBoardEl.children[i].classList.add('win'));
+      const matchWon = tttScore[symbol] >= 3;
+      tttTurnBanner.textContent = (matchWon ? '🏆 ' : '🎉 ') + winnerName + (matchWon ? ' WINS THE MATCH!' : ' wins the round!');
+      tttTurnBanner.className = 'turn-banner turn-over celebrate';
+      addSystemMsg(winnerName + (matchWon ? ' won the match! Reset to play again.' : ' won the round!'));
+      return;
+    }
+    if(tttBoard.every(v=>v)){
+      tttOver = true;
+      tttRender();
+      tttTurnBanner.textContent = "It's a draw!";
+      tttTurnBanner.className = 'turn-banner turn-over';
+      addSystemMsg('Tic-Tac-Toe round was a draw!');
+      return;
+    }
+    tttTurn = symbol === 'X' ? 'O' : 'X';
+    tttRender();
+  }
+
+  document.getElementById('tttRematchBtn').addEventListener('click', () => {
+    tttBoard = Array(9).fill(null); tttTurn='X'; tttOver=false; tttRender();
+    if(conn && conn.open) conn.send({type:'tttRematch'});
+    addSystemMsg('You started a new round.');
+  });
+  document.getElementById('tttResetBtn').addEventListener('click', () => {
+    tttScore = {X:0,O:0}; tttOver=false; tttBoard=Array(9).fill(null); tttTurn='X'; tttRender();
+    if(conn && conn.open) conn.send({type:'tttReset'});
+  });
+
+  // ================= LUDO =================
+  const ludoRing = document.getElementById('ludoRing');
+  const ludoTurnBanner = document.getElementById('ludoTurnBanner');
+  const ludoRedTokensEl = document.getElementById('ludoRedTokens');
+  const ludoYellowTokensEl = document.getElementById('ludoYellowTokens');
+  const ludoRollBtn = document.getElementById('ludoRollBtn');
+
+  const LUDO_START = { red: 29, yellow: 9 };
+  const LUDO_SAFE = [29, 9, 39, 19];
+
+  function ludoRingCoords(){
+    const coords = [];
+    for(let c=1;c<=11;c++) coords.push([1,c]);
+    for(let r=2;r<=11;r++) coords.push([r,11]);
+    for(let c=10;c>=1;c--) coords.push([11,c]);
+    for(let r=10;r>=2;r--) coords.push([r,1]);
+    return coords;
+  }
+  const LUDO_COORDS = ludoRingCoords();
+
+  function ludoFresh(){
+    return {
+      tokens: {
+        red:    [{status:'yard',steps:0},{status:'yard',steps:0},{status:'yard',steps:0},{status:'yard',steps:0}],
+        yellow: [{status:'yard',steps:0},{status:'yard',steps:0},{status:'yard',steps:0},{status:'yard',steps:0}]
+      },
+      turn: 'red',
+      lastRoll: null,
+      awaitingMove: false,
+      movable: []
+    };
+  }
+  let ludoState = ludoFresh();
+
+  function ludoGetMovable(color, roll){
+    const toks = ludoState.tokens[color];
+    const movable = [];
+    toks.forEach((t,i)=>{
+      if(t.status==='home') return;
+      if(t.status==='yard'){ if(roll===6) movable.push(i); }
+      else if(t.status==='active'){ movable.push(i); }
+    });
+    return movable;
+  }
+
+  function ludoMoveToken(color, idx, roll){
+    const t = ludoState.tokens[color][idx];
+    if(t.status==='yard'){
+      t.status='active'; t.steps=0;
+    } else {
+      let newSteps = t.steps + roll;
+      if(newSteps>=45){
+        t.steps=45; t.status='home';
+      } else {
+        t.steps=newSteps;
+        if(t.steps<40){
+          const ringIdx = (LUDO_START[color]+t.steps)%40;
+          const opp = color==='red' ? 'yellow' : 'red';
+          ludoState.tokens[opp].forEach(ot=>{
+            if(ot.status==='active'){
+              const otIdx = (LUDO_START[opp]+ot.steps)%40;
+              if(otIdx===ringIdx && LUDO_SAFE.indexOf(ringIdx)===-1){
+                ot.status='yard'; ot.steps=0;
+              }
+            }
+          });
+        }
+      }
+    }
+  }
+
+  function ludoWinner(){
+    if(ludoState.tokens.red.every(t=>t.status==='home')) return 'red';
+    if(ludoState.tokens.yellow.every(t=>t.status==='home')) return 'yellow';
+    return null;
+  }
+
+  function ludoSend(){
+    if(conn && conn.open) conn.send({type:'ludoState', state: ludoState});
+  }
+
+  function ludoRoll(){
+    if(ludoWinner()) return;
+    if(ludoState.turn !== myColor) return;
+    if(ludoState.awaitingMove) return;
+    const roll = 1 + Math.floor(Math.random()*6);
+    ludoState.lastRoll = roll;
+    const movable = ludoGetMovable(myColor, roll);
+    if(movable.length===0){
+      addSystemMsg('Rolled a ' + roll + ' — no valid moves, turn passes.');
+      ludoState.turn = oppColor;
+      ludoSend(); ludoRender();
+      return;
+    }
+    ludoState.awaitingMove = true;
+    ludoState.movable = movable;
+    ludoRender();
+  }
+
+  function ludoPick(color, idx){
+    if(color !== myColor) return;
+    if(!ludoState.awaitingMove) return;
+    if(ludoState.turn !== myColor) return;
+    if(ludoState.movable.indexOf(idx)===-1) return;
+    ludoMoveToken(myColor, idx, ludoState.lastRoll);
+    ludoState.awaitingMove = false;
+    ludoState.movable = [];
+    const w = ludoWinner();
+    if(w){
+      // winner determined in render
+    } else if(ludoState.lastRoll !== 6){
+      ludoState.turn = oppColor;
+    }
+    ludoSend();
+    ludoRender();
+  }
+
+  function ludoTokenLabel(t){
+    if(t.status==='yard') return 'Yard';
+    if(t.status==='home') return 'Home';
+    return String(t.steps);
+  }
+
+  function ludoRender(){
+    ludoRing.innerHTML = '';
+    LUDO_COORDS.forEach((rc, idx) => {
+      const cell = document.createElement('div');
+      cell.className = 'ludo-cell';
+      cell.style.gridRow = rc[0];
+      cell.style.gridColumn = rc[1];
+      if(idx===LUDO_START.red) cell.classList.add('start-red');
+      if(idx===LUDO_START.yellow) cell.classList.add('start-yellow');
+      if(LUDO_SAFE.indexOf(idx)!==-1) cell.classList.add('safe');
+      ludoRing.appendChild(cell);
+    });
+    const center = document.createElement('div');
+    center.className = 'ludo-center';
+    const dice = document.createElement('div');
+    dice.className = 'ludo-center-dice';
+    dice.textContent = ludoState.lastRoll ? '🎲 ' + ludoState.lastRoll : '🎲';
+    const turnTxt = document.createElement('div');
+    turnTxt.className = 'ludo-center-turn';
+    const w = ludoWinner();
+    if(w){
+      const winnerName = w===myColor ? myName : theirName;
+      turnTxt.textContent = winnerName + ' wins the race!';
+    } else {
+      turnTxt.textContent = ludoState.turn===myColor ? 'Your turn' : theirName + "'s turn";
+    }
+    center.appendChild(dice); center.appendChild(turnTxt);
+    ludoRing.appendChild(center);
+
+    ['red','yellow'].forEach(color => {
+      ludoState.tokens[color].forEach((t) => {
+        if(t.status==='active' && t.steps<40){
+          const ringIdx = (LUDO_START[color]+t.steps)%40;
+          const rc = LUDO_COORDS[ringIdx];
+          const tok = document.createElement('div');
+          tok.className = 'ludo-token ' + color;
+          tok.style.gridRow = rc[0];
+          tok.style.gridColumn = rc[1];
+          tok.style.position = 'relative';
+          tok.style.top = '0'; tok.style.left = '0'; tok.style.transform='none';
+          ludoRing.appendChild(tok);
+        }
+      });
+    });
+
+    // token buttons
+    ['red','yellow'].forEach(color => {
+      const container = color==='red' ? ludoRedTokensEl : ludoYellowTokensEl;
+      container.innerHTML = '';
+      ludoState.tokens[color].forEach((t, i) => {
+        const btn = document.createElement('div');
+        btn.className = 'ludo-token-btn ' + color + '-tok' + (t.status==='home' ? ' home':'');
+        const movableNow = color===myColor && ludoState.awaitingMove && ludoState.turn===myColor && ludoState.movable.indexOf(i)!==-1;
+        if(movableNow) btn.classList.add('movable');
+        btn.textContent = ludoTokenLabel(t);
+        btn.addEventListener('click', () => ludoPick(color, i));
+        container.appendChild(btn);
+      });
+    });
+
+    ludoTurnBanner.classList.remove('celebrate');
+    if(w){
+      const winnerName = w===myColor ? myName : theirName;
+      ludoTurnBanner.textContent = '🏆 ' + winnerName + ' WINS THE RACE!';
+      ludoTurnBanner.className = 'turn-banner turn-over celebrate';
+      ludoRollBtn.disabled = true;
+    } else if(ludoState.turn===myColor){
+      ludoTurnBanner.textContent = ludoState.awaitingMove ? 'Pick a token to move!' : 'Your turn — roll the dice!';
+      ludoTurnBanner.className = 'turn-banner turn-you';
+      ludoRollBtn.disabled = ludoState.awaitingMove;
+    } else {
+      ludoTurnBanner.textContent = theirName + "'s turn...";
+      ludoTurnBanner.className = 'turn-banner turn-them';
+      ludoRollBtn.disabled = true;
+    }
+  }
+
+  ludoRollBtn.addEventListener('click', ludoRoll);
+  document.getElementById('ludoRematchBtn').addEventListener('click', () => {
+    ludoState = ludoFresh(); ludoRender();
+    if(conn && conn.open) conn.send({type:'ludoRematch'});
+    addSystemMsg('You started a new race.');
+  });
+
+  // ================= SPEED TAP =================
+  const tapArea = document.getElementById('tapArea');
+  const tapReadyBtn = document.getElementById('tapReadyBtn');
+  const tapNextBtn = document.getElementById('tapNextBtn');
+  const tapScoreLine = document.getElementById('tapScoreLine');
+  const tapBanner = document.getElementById('tapBanner');
+
+  let tapPhase = 'idle'; // idle, waiting, countdown, live, result
+  let tapReadyMe = false, tapReadyThem = false;
+  let tapStartTs = 0;
+  let tapMyResult = null, tapTheirResult = null;
+  let tapScore = {me:0, them:0};
+
+  function tapReset(){
+    tapPhase='idle'; tapReadyMe=false; tapReadyThem=false;
+    tapMyResult=null; tapTheirResult=null;
+    tapReadyBtn.style.display='inline-block';
+    tapNextBtn.style.display='none';
+  }
+
+  function tapRender(){
+    tapArea.className = 'tap-area';
+    if(tapPhase==='idle'){
+      tapArea.textContent = 'Click "I\'m Ready" to begin';
+    } else if(tapPhase==='waiting'){
+      tapArea.textContent = 'Waiting for opponent to ready up...';
+    } else if(tapPhase==='countdown'){
+      tapArea.classList.add('countdown');
+      tapArea.textContent = 'Wait for it...';
+    } else if(tapPhase==='live'){
+      tapArea.classList.add('live');
+      tapArea.textContent = 'TAP NOW!';
+    } else if(tapPhase==='falsestart'){
+      tapArea.classList.add('falsestart');
+      tapArea.textContent = 'Too soon! False start.';
+    } else if(tapPhase==='result'){
+      tapArea.classList.add('result');
+      const mine = tapMyResult==='FALSE' ? 'False start' : (tapMyResult + ' ms');
+      const theirs = tapTheirResult==='FALSE' ? 'False start' : (tapTheirResult + ' ms');
+      tapArea.textContent = 'You: ' + mine + ' | Opponent: ' + theirs;
+    }
+    tapScoreLine.textContent = 'Score — You: ' + tapScore.me + ' · Opponent: ' + tapScore.them;
+    tapBanner.classList.remove('celebrate');
+    if(tapScore.me>=5 || tapScore.them>=5){
+      const iWon = tapScore.me>=5;
+      tapBanner.textContent = iWon ? '🏆 YOU WIN THE DUEL!' : '🏆 ' + theirName + ' WINS THE DUEL!';
+      tapBanner.className = 'turn-banner turn-over celebrate';
+    } else {
+      tapBanner.textContent = 'First to 5 wins the duel ⚡';
+      tapBanner.className = 'turn-banner';
+    }
+  }
+
+  tapReadyBtn.addEventListener('click', () => {
+    if(tapScore.me>=5 || tapScore.them>=5) return;
+    tapReadyMe = true;
+    tapPhase = 'waiting';
+    tapReadyBtn.style.display='none';
+    if(conn && conn.open) conn.send({type:'tapReady'});
+    tapRender();
+    tapMaybeStart();
+  });
+
+  function tapMaybeStart(){
+    if(isHost && tapReadyMe && tapReadyThem && tapPhase==='waiting'){
+      const delay = 800 + Math.random()*3000;
+      if(conn && conn.open) conn.send({type:'tapGo', delay: delay});
+      tapBeginCountdown(delay);
+    }
+  }
+
+  function tapBeginCountdown(delay){
+    tapPhase = 'countdown';
+    tapRender();
+    setTimeout(() => {
+      if(tapPhase==='countdown'){
+        tapPhase = 'live';
+        tapStartTs = performance.now();
+        tapRender();
+      }
+    }, delay);
+  }
+
+  tapArea.addEventListener('click', () => {
+    if(tapPhase==='countdown'){
+      tapPhase = 'falsestart';
+      tapMyResult = 'FALSE';
+      if(conn && conn.open) conn.send({type:'tapResult', falseStart:true});
+      tapRender();
+      setTimeout(() => { if(tapPhase==='falsestart'){ tapPhase='result'; tapRender(); tapMaybeFinish(); } }, 700);
+    } else if(tapPhase==='live'){
+      const reaction = Math.round(performance.now() - tapStartTs);
+      tapMyResult = reaction;
+      tapPhase = 'result';
+      if(conn && conn.open) conn.send({type:'tapResult', time: reaction, falseStart:false});
+      tapRender();
+      tapMaybeFinish();
+    }
+  });
+
+  function tapMaybeFinish(){
+    if(tapMyResult===null || tapTheirResult===null) return;
+    let iWonRound;
+    if(tapMyResult==='FALSE' && tapTheirResult==='FALSE'){ iWonRound = null; }
+    else if(tapMyResult==='FALSE'){ iWonRound = false; }
+    else if(tapTheirResult==='FALSE'){ iWonRound = true; }
+    else { iWonRound = tapMyResult < tapTheirResult; }
+
+    if(iWonRound===true){ tapScore.me++; addSystemMsg('You won that round! ⚡'); }
+    else if(iWonRound===false){ tapScore.them++; addSystemMsg(theirName + ' won that round.'); }
+    else { addSystemMsg('Double false start — redo!'); }
+
+    tapReadyBtn.style.display='none';
+    tapNextBtn.style.display='inline-block';
+    tapRender();
+  }
+
+  tapNextBtn.addEventListener('click', () => {
+    tapReset(); tapRender();
+    if(conn && conn.open) conn.send({type:'tapNext'});
   });
 
   // ---------- Chat ----------
