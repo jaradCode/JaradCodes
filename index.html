@@ -20,6 +20,30 @@
     --text:#e2e8f0;
     --muted:#94a3b8;
   }
+  [data-theme="light"]{
+    --bg1:#e0e7ff;
+    --bg2:#f8fafc;
+    --panel:#ffffffd9;
+    --panel-border:#c7d2fe;
+    --text:#1e293b;
+    --muted:#64748b;
+  }
+  [data-theme="light"] .cell,[data-theme="light"] .ttt-cell,[data-theme="light"] .ludo-cell,
+  [data-theme="light"] #c4Board,[data-theme="light"] #tttBoard,[data-theme="light"] .ludo-ring,
+  [data-theme="light"] .tap-area,[data-theme="light"] .ludo-token-btn,[data-theme="light"] .msg.them,
+  [data-theme="light"] input[type=text],[data-theme="light"] .memory-card{
+    background:#eef1fb;
+  }
+  .theme-toggle{
+    position:fixed;
+    top:16px; right:16px;
+    width:40px; height:40px;
+    border-radius:50%;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    font-size:1.1rem;
+    z-index:50;
+  }
   *{box-sizing:border-box;}
   html,body{height:100%;}
   body{
@@ -360,6 +384,65 @@
   .tap-area.falsestart{background:#7f1d1d;}
   .tap-area.result{background:#312e81;}
 
+  /* Overall scoreboard */
+  .overall-board{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:14px;
+    padding:10px 16px;
+    max-width:1000px;
+    width:100%;
+    display:flex;
+    justify-content:center;
+    gap:18px;
+    font-size:0.85rem;
+    margin-bottom:14px;
+    text-align:center;
+  }
+
+  /* Rock Paper Scissors */
+  .rps-choices{display:flex; gap:10px; justify-content:center; margin-top:10px;}
+  .rps-btn{flex:1; max-width:100px; font-size:2rem; padding:14px; background:#25204a; color:var(--text);}
+  .rps-btn.selected{background:linear-gradient(90deg, var(--accent), #6366f1); color:white;}
+  .rps-result{text-align:center; font-size:1rem; margin-top:12px; min-height:24px;}
+
+  /* Guess the Number */
+  .guess-input-row{display:flex; gap:8px; margin-top:10px;}
+  .guess-input-row input{flex:1;}
+  .guess-feedback{text-align:center; font-size:0.95rem; margin-top:10px; min-height:24px;}
+  .guess-history{font-size:0.78rem; color:var(--muted); text-align:center; margin-top:8px; min-height:18px;}
+
+  /* Would You Rather */
+  .wyr-prompt{text-align:center; font-size:1rem; font-weight:600; margin:14px 0; min-height:50px;}
+  .wyr-options{display:flex; gap:10px;}
+  .wyr-btn{flex:1; background:#25204a; color:var(--text); padding:16px 10px; font-size:0.85rem;}
+  .wyr-btn.picked{background:linear-gradient(90deg, var(--accent2), #db2777); color:white;}
+  .wyr-result{text-align:center; font-size:0.85rem; color:var(--muted); margin-top:10px; min-height:20px;}
+
+  /* Memory Match */
+  .memory-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+    max-width:340px;
+    margin:0 auto;
+  }
+  .memory-card{
+    aspect-ratio:1/1;
+    background:#0f0c29;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.6rem;
+    cursor:pointer;
+  }
+  .memory-card.flipped{background:linear-gradient(135deg, var(--accent), #6366f1);}
+  .memory-card.matched{background:#166534; cursor:default;}
+
+  /* Typing indicator */
+  .typing-indicator{font-size:0.75rem; color:var(--muted); font-style:italic; min-height:16px; margin-bottom:4px;}
+
   /* ---------- Chat ---------- */
   .chat-panel{
     background:var(--panel);
@@ -428,7 +511,8 @@
 <body>
 
 <h1>J.Codes.Fun</h1>
-<div class="subtitle">Jarad &amp; Nikiwe's private game hub 🎮 — four games, one winner each round, no mercy.</div>
+<button id="themeToggle" class="theme-toggle" title="Toggle light/dark">🌙</button>
+<div class="subtitle" id="pageSubtitle">Pick a game, connect with a friend, and settle it once and for all. 🎮</div>
 
 <div class="music-panel">
   <div class="music-label">🎵 Set the mood</div>
@@ -438,7 +522,7 @@
 <div id="lobby">
   <div class="lobby-section">
     <h3>① Enter your name</h3>
-    <input type="text" id="nameInput" placeholder="Your name" maxlength="16" value="Jarad">
+    <input type="text" id="nameInput" placeholder="Your name" maxlength="16">
   </div>
 
   <hr class="sep">
@@ -467,11 +551,16 @@
 </div>
 
 <div id="game">
+  <div class="overall-board" id="overallBoard">Overall — You: 0 · Opponent: 0</div>
   <div class="game-tabs">
     <button class="tab-btn active" data-game="c4">🔴🟡 Connect 4</button>
     <button class="tab-btn" data-game="ludo">🎲 Ludo</button>
     <button class="tab-btn" data-game="ttt">❌⭕ Tic-Tac-Toe</button>
     <button class="tab-btn" data-game="tap">⚡ Speed Tap</button>
+    <button class="tab-btn" data-game="rps">✊✋✌️ RPS</button>
+    <button class="tab-btn" data-game="guess">🔢 Guess Number</button>
+    <button class="tab-btn" data-game="wyr">🤔 Would You Rather</button>
+    <button class="tab-btn" data-game="memory">🧠 Memory Match</button>
   </div>
 
   <div class="game-wrap">
@@ -536,11 +625,73 @@
         <div class="score-line" id="tapScoreLine">Score — You: 0 · Opponent: 0</div>
       </div>
 
+      <!-- Rock Paper Scissors -->
+      <div id="panel-rps" class="board-panel">
+        <div class="turn-banner" id="rpsBanner">First to 5 wins the duel</div>
+        <div class="help-text">Pick rock, paper, or scissors. Both choices are hidden until you've both picked, then the round resolves.</div>
+        <div class="rps-choices">
+          <button class="rps-btn" data-choice="rock">✊</button>
+          <button class="rps-btn" data-choice="paper">✋</button>
+          <button class="rps-btn" data-choice="scissors">✌️</button>
+        </div>
+        <div class="rps-result" id="rpsResult"></div>
+        <div class="score-line" id="rpsScoreLine">Score — You: 0 · Opponent: 0</div>
+      </div>
+
+      <!-- Guess the Number -->
+      <div id="panel-guess" class="board-panel">
+        <div class="turn-banner" id="guessBanner">Connecting...</div>
+        <div class="help-text">One of you secretly sets a number 1-100, the other guesses with hot/cold hints. Fewer guesses wins the round, then you swap roles.</div>
+        <div id="guessSetterArea">
+          <div class="guess-input-row">
+            <input type="text" id="guessSecretInput" placeholder="Pick a secret number 1-100">
+            <button class="btn-primary" id="guessSetBtn">Set</button>
+          </div>
+        </div>
+        <div id="guessGuesserArea" style="display:none;">
+          <div class="guess-input-row">
+            <input type="text" id="guessTryInput" placeholder="Your guess">
+            <button class="btn-primary" id="guessTryBtn">Guess</button>
+          </div>
+        </div>
+        <div class="guess-feedback" id="guessFeedback"></div>
+        <div class="guess-history" id="guessHistory"></div>
+        <div class="score-line" id="guessScoreLine">Rounds won — You: 0 · Opponent: 0</div>
+      </div>
+
+      <!-- Would You Rather -->
+      <div id="panel-wyr" class="board-panel">
+        <div class="turn-banner" id="wyrBanner">See if you two match!</div>
+        <div class="help-text">Both pick an answer without seeing the other's choice. Once you've both picked, see if you matched.</div>
+        <div class="wyr-prompt" id="wyrPrompt">Click Next Question to start</div>
+        <div class="wyr-options">
+          <button class="wyr-btn" id="wyrBtnA">A</button>
+          <button class="wyr-btn" id="wyrBtnB">B</button>
+        </div>
+        <div class="wyr-result" id="wyrResult"></div>
+        <div class="controls-row">
+          <button class="btn-secondary" id="wyrNextBtn">Next Question</button>
+        </div>
+        <div class="score-line" id="wyrScoreLine">Matched — 0 times</div>
+      </div>
+
+      <!-- Memory Match -->
+      <div id="panel-memory" class="board-panel">
+        <div class="turn-banner" id="memoryBanner">Connecting...</div>
+        <div class="help-text">Flip two cards. Find a matching pair and you go again. Miss, and it's the other person's turn. Most pairs when the board clears wins.</div>
+        <div class="memory-grid" id="memoryGrid"></div>
+        <div class="score-line" id="memoryScoreLine">Pairs — You: 0 · Opponent: 0</div>
+        <div class="controls-row">
+          <button class="btn-secondary" id="memoryRematchBtn">🔄 New Board</button>
+        </div>
+      </div>
+
     </div>
 
     <div class="chat-panel">
       <div class="chat-header">💬 Chat</div>
       <div id="messages"></div>
+      <div class="typing-indicator" id="typingIndicator">&nbsp;</div>
       <div class="chat-input-row">
         <input type="text" id="chatInput" placeholder="Say something..." maxlength="300">
         <button id="sendChatBtn">Send</button>
@@ -549,7 +700,7 @@
   </div>
 </div>
 
-<footer>Just the two of us. 🎮💘</footer>
+<footer>Made for game nights everywhere. 🎮</footer>
 
 <script>
 (function(){
@@ -586,12 +737,38 @@
 
   function setLobbyStatus(text){ lobbyStatus.textContent = text; }
 
+  // Remember name across visits
+  const savedName = localStorage.getItem('jcf_name');
+  if(savedName){ nameInput.value = savedName; }
+
+  // Theme toggle
+  const themeToggle = document.getElementById('themeToggle');
+  const savedTheme = localStorage.getItem('jcf_theme');
+  if(savedTheme==='light'){ document.documentElement.setAttribute('data-theme','light'); themeToggle.textContent='☀️'; }
+  themeToggle.addEventListener('click', () => {
+    const isLight = document.documentElement.getAttribute('data-theme')==='light';
+    if(isLight){ document.documentElement.removeAttribute('data-theme'); themeToggle.textContent='🌙'; localStorage.setItem('jcf_theme','dark'); }
+    else { document.documentElement.setAttribute('data-theme','light'); themeToggle.textContent='☀️'; localStorage.setItem('jcf_theme','light'); }
+  });
+
+  // Overall scoreboard (tracks round/match wins across every game)
+  let overallScore = { me: 0, them: 0 };
+  const overallBoard = document.getElementById('overallBoard');
+  function bumpOverall(isMe){
+    if(isMe) overallScore.me++; else overallScore.them++;
+    renderOverall();
+  }
+  function renderOverall(){
+    overallBoard.textContent = 'Overall — You: ' + overallScore.me + ' · Opponent: ' + overallScore.them;
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const autoJoin = urlParams.get('join');
   if(autoJoin){ joinInput.value = autoJoin; }
 
   createBtn.addEventListener('click', () => {
     myName = nameInput.value.trim() || 'Player 1';
+    localStorage.setItem('jcf_name', myName);
     isHost = true;
     myColor = 'red'; oppColor = 'yellow';
     createBtn.disabled = true;
@@ -627,6 +804,7 @@
     const code = joinInput.value.trim();
     if(!code){ setLobbyStatus('Please enter a game code.'); return; }
     myName = nameInput.value.trim() || 'Player 2';
+    localStorage.setItem('jcf_name', myName);
     isHost = false;
     myColor = 'yellow'; oppColor = 'red';
     joinBtn.disabled = true;
@@ -669,6 +847,11 @@
     tttInit(); tttRender();
     ludoState = ludoFresh(); ludoRender();
     tapReset(); tapRender();
+    rpsReset(); rpsRender();
+    guessInit(); guessRenderRoles(); guessRenderScore();
+    wyrReset();
+    if(isHost){ memoryState = memoryFreshState(); memorySend(); }
+    memoryRender();
     switchTab('c4', false);
   }
 
@@ -680,6 +863,9 @@
       addSystemMsg(theirName + ' joined the game!');
     } else if(data.type === 'chat'){
       addMsg(data.text, 'them');
+      hideTyping();
+    } else if(data.type === 'typing'){
+      showTyping();
     } else if(data.type === 'switchGame'){
       switchTab(data.game, false);
     } else if(data.type === 'c4Move'){
@@ -697,9 +883,12 @@
     } else if(data.type === 'tttReset'){
       tttScore = {X:0,O:0}; tttOver=false; tttBoard=Array(9).fill(null); tttTurn='X'; tttRender();
     } else if(data.type === 'ludoState'){
+      const wasWon = ludoWinner();
       ludoState = data.state; ludoRender();
+      const nowWon = ludoWinner();
+      if(nowWon && !wasWon){ ludoAnnounced = true; bumpOverall(nowWon===myColor); }
     } else if(data.type === 'ludoRematch'){
-      ludoState = ludoFresh(); ludoRender();
+      ludoState = ludoFresh(); ludoAnnounced = false; ludoRender();
       addSystemMsg('New Ludo race started.');
     } else if(data.type === 'tapReady'){
       tapReadyThem = true; tapMaybeStart();
@@ -710,8 +899,49 @@
       tapMaybeFinish();
     } else if(data.type === 'tapNext'){
       tapReset(); tapRender();
+    } else if(data.type === 'rpsChoice'){
+      rpsTheirChoice = data.choice; rpsResolve();
+    } else if(data.type === 'guessStart'){
+      guessSecret = 'SET'; // sentinel: we don't know the value, just that it's live
+      guessGuesserArea.style.display='block'; guessSetterArea.style.display='none';
+      guessFeedback.textContent = 'Go ahead, guess a number 1-100!';
+      guessHistory.textContent = '';
+    } else if(data.type === 'guessTry'){
+      guessHandleIncomingTry(data.value);
+    } else if(data.type === 'guessFeedback'){
+      guessApplyFeedback(data.value, data.result, data.attempts);
+      guessScore.red = data.scoreRed; guessScore.yellow = data.scoreYellow;
+      guessRenderScore();
+      if(data.result === 'correct'){
+        bumpOverall(true);
+        guessRoundOwner = data.newOwner; guessSecret = null; guessAttempts = 0;
+        guessRenderRoles();
+      }
+    } else if(data.type === 'wyrNewPrompt'){
+      wyrShowQuestion(data.idx);
+    } else if(data.type === 'wyrPick'){
+      wyrTheirPick = data.choice; wyrCheckReveal();
+    } else if(data.type === 'memoryState'){
+      const wasComplete = memoryState && memoryState.matched.every(m=>m);
+      memoryState = data.state;
+      memoryRender();
+      const nowComplete = memoryState.matched.every(m=>m);
+      if(nowComplete && !wasComplete && memoryState.scoreRed !== memoryState.scoreYellow){
+        const winnerColor = memoryState.scoreRed > memoryState.scoreYellow ? 'red' : 'yellow';
+        bumpOverall(winnerColor === myColor);
+      }
     }
   }
+
+  // ---------- Typing indicator ----------
+  const typingIndicator = document.getElementById('typingIndicator');
+  let typingTimeout = null;
+  function showTyping(){
+    typingIndicator.textContent = theirName + ' is typing...';
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(hideTyping, 2000);
+  }
+  function hideTyping(){ typingIndicator.textContent = '\u00A0'; }
 
   // ---------- Tabs ----------
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -782,6 +1012,7 @@
       const winnerName = (color === myColor) ? myName : theirName;
       c4Score[color] = (c4Score[color]||0) + 1;
       c4RenderScore();
+      bumpOverall(color === myColor);
       c4TurnBanner.textContent = '🎉 ' + winnerName + ' wins the round!';
       c4TurnBanner.className = 'turn-banner turn-over celebrate';
       addSystemMsg(winnerName + ' won the round! Click Rematch to play again.');
@@ -912,6 +1143,7 @@
       tttOver = true;
       tttScore[symbol] = (tttScore[symbol]||0) + 1;
       const winnerName = symbol===mySymbol ? myName : theirName;
+      bumpOverall(symbol === mySymbol);
       tttRender();
       winLine.forEach(i => tttBoardEl.children[i].classList.add('win'));
       const matchWon = tttScore[symbol] >= 3;
@@ -975,6 +1207,7 @@
     };
   }
   let ludoState = ludoFresh();
+  let ludoAnnounced = false;
 
   function ludoGetMovable(color, roll){
     const toks = ludoState.tokens[color];
@@ -1051,7 +1284,7 @@
     ludoState.movable = [];
     const w = ludoWinner();
     if(w){
-      // winner determined in render
+      if(!ludoAnnounced){ ludoAnnounced = true; bumpOverall(w===myColor); }
     } else if(ludoState.lastRoll !== 6){
       ludoState.turn = oppColor;
     }
@@ -1144,7 +1377,7 @@
 
   ludoRollBtn.addEventListener('click', ludoRoll);
   document.getElementById('ludoRematchBtn').addEventListener('click', () => {
-    ludoState = ludoFresh(); ludoRender();
+    ludoState = ludoFresh(); ludoAnnounced = false; ludoRender();
     if(conn && conn.open) conn.send({type:'ludoRematch'});
     addSystemMsg('You started a new race.');
   });
@@ -1257,8 +1490,8 @@
     else if(tapTheirResult==='FALSE'){ iWonRound = true; }
     else { iWonRound = tapMyResult < tapTheirResult; }
 
-    if(iWonRound===true){ tapScore.me++; addSystemMsg('You won that round! ⚡'); }
-    else if(iWonRound===false){ tapScore.them++; addSystemMsg(theirName + ' won that round.'); }
+    if(iWonRound===true){ tapScore.me++; addSystemMsg('You won that round! ⚡'); bumpOverall(true); }
+    else if(iWonRound===false){ tapScore.them++; addSystemMsg(theirName + ' won that round.'); bumpOverall(false); }
     else { addSystemMsg('Double false start — redo!'); }
 
     tapReadyBtn.style.display='none';
@@ -1269,6 +1502,302 @@
   tapNextBtn.addEventListener('click', () => {
     tapReset(); tapRender();
     if(conn && conn.open) conn.send({type:'tapNext'});
+  });
+
+  // ================= ROCK PAPER SCISSORS =================
+  const rpsBtns = document.querySelectorAll('.rps-btn');
+  const rpsResultEl = document.getElementById('rpsResult');
+  const rpsScoreLine = document.getElementById('rpsScoreLine');
+  const rpsBanner = document.getElementById('rpsBanner');
+  let rpsMyChoice = null, rpsTheirChoice = null;
+  let rpsScore = { me: 0, them: 0 };
+  const RPS_BEATS = { rock:'scissors', paper:'rock', scissors:'paper' };
+  const RPS_EMOJI = { rock:'✊', paper:'✋', scissors:'✌️' };
+
+  function rpsReset(){
+    rpsMyChoice = null; rpsTheirChoice = null;
+    rpsBtns.forEach(b => b.classList.remove('selected'));
+    rpsResultEl.textContent = '';
+  }
+  function rpsRender(){
+    rpsScoreLine.textContent = 'Score — You: ' + rpsScore.me + ' · Opponent: ' + rpsScore.them;
+    rpsBanner.classList.remove('celebrate');
+    if(rpsScore.me>=5 || rpsScore.them>=5){
+      rpsBanner.textContent = (rpsScore.me>=5 ? '🏆 YOU WIN THE DUEL!' : '🏆 ' + theirName + ' WINS THE DUEL!');
+      rpsBanner.className = 'turn-banner turn-over celebrate';
+    } else {
+      rpsBanner.textContent = 'First to 5 wins the duel';
+      rpsBanner.className = 'turn-banner';
+    }
+  }
+  rpsBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(rpsMyChoice || rpsScore.me>=5 || rpsScore.them>=5) return;
+      rpsMyChoice = btn.dataset.choice;
+      btn.classList.add('selected');
+      rpsResultEl.textContent = 'Waiting for opponent...';
+      if(conn && conn.open) conn.send({type:'rpsChoice', choice: rpsMyChoice});
+      rpsResolve();
+    });
+  });
+  function rpsResolve(){
+    if(!rpsMyChoice || !rpsTheirChoice) return;
+    let outcome;
+    if(rpsMyChoice===rpsTheirChoice) outcome='draw';
+    else outcome = (RPS_BEATS[rpsMyChoice]===rpsTheirChoice) ? 'win' : 'lose';
+    const mine = RPS_EMOJI[rpsMyChoice], theirs = RPS_EMOJI[rpsTheirChoice];
+    if(outcome==='draw'){ rpsResultEl.textContent = 'You ' + mine + ' vs ' + theirs + ' — draw!'; }
+    else if(outcome==='win'){ rpsScore.me++; rpsResultEl.textContent = 'You ' + mine + ' beats ' + theirs + ' — you win!'; bumpOverall(true); }
+    else { rpsScore.them++; rpsResultEl.textContent = 'You ' + mine + ' loses to ' + theirs + ' — they win!'; bumpOverall(false); }
+    rpsRender();
+    setTimeout(rpsReset, 2200);
+  }
+
+  // ================= GUESS THE NUMBER =================
+  const guessSetterArea = document.getElementById('guessSetterArea');
+  const guessGuesserArea = document.getElementById('guessGuesserArea');
+  const guessSecretInput = document.getElementById('guessSecretInput');
+  const guessSetBtn = document.getElementById('guessSetBtn');
+  const guessTryInput = document.getElementById('guessTryInput');
+  const guessTryBtn = document.getElementById('guessTryBtn');
+  const guessFeedback = document.getElementById('guessFeedback');
+  const guessHistory = document.getElementById('guessHistory');
+  const guessScoreLine = document.getElementById('guessScoreLine');
+  const guessBanner = document.getElementById('guessBanner');
+
+  let guessRoundOwner = 'red'; // setter's color
+  let guessSecret = null;
+  let guessAttempts = 0;
+  let guessScore = { red:0, yellow:0 };
+
+  function guessInit(){
+    guessRoundOwner = 'red'; guessSecret = null; guessAttempts = 0;
+    guessScore = { red:0, yellow:0 };
+    guessFeedback.textContent = ''; guessHistory.textContent = '';
+    guessSecretInput.value = ''; guessTryInput.value = '';
+  }
+  function guessRenderRoles(){
+    const amSetter = guessRoundOwner === myColor;
+    guessSetterArea.style.display = amSetter ? 'block' : 'none';
+    guessGuesserArea.style.display = amSetter ? 'none' : 'block';
+    guessBanner.textContent = amSetter ? 'Set a secret number 1-100' : "Waiting for them to set a number...";
+    guessBanner.className = 'turn-banner ' + (amSetter ? 'turn-you' : 'turn-them');
+  }
+  function guessRenderScore(){
+    guessScoreLine.textContent = 'Rounds won — You: ' + (guessScore[myColor]||0) + ' · Opponent: ' + (guessScore[oppColor]||0);
+  }
+  function guessApplyFeedback(value, result, attempts){
+    let text;
+    if(result==='correct') text = 'Correct! It was ' + value + ' (' + attempts + ' guesses)';
+    else if(result==='higher') text = value + ' → go higher!';
+    else text = value + ' → go lower!';
+    guessFeedback.textContent = text;
+    guessHistory.textContent = 'Attempts this round: ' + attempts;
+  }
+  function guessColorOther(c){ return c==='red' ? 'yellow' : 'red'; }
+
+  guessSetBtn.addEventListener('click', () => {
+    const n = parseInt(guessSecretInput.value, 10);
+    if(!n || n<1 || n>100){ guessFeedback.textContent = 'Enter a number between 1 and 100.'; return; }
+    guessSecret = n; guessAttempts = 0;
+    guessSecretInput.value = '';
+    guessFeedback.textContent = 'Number set — waiting for their guesses...';
+    guessHistory.textContent = '';
+    guessBanner.textContent = 'They are guessing...';
+    if(conn && conn.open) conn.send({type:'guessStart'});
+  });
+  guessTryBtn.addEventListener('click', () => {
+    const n = parseInt(guessTryInput.value, 10);
+    if(!n || n<1 || n>100) return;
+    if(conn && conn.open) conn.send({type:'guessTry', value: n});
+    guessTryInput.value = '';
+  });
+  function guessHandleIncomingTry(value){
+    if(guessSecret===null || guessRoundOwner!==myColor) return;
+    guessAttempts++;
+    let result;
+    if(value===guessSecret) result='correct';
+    else if(value<guessSecret) result='higher';
+    else result='lower';
+    guessApplyFeedback(value, result, guessAttempts);
+    let newOwner = guessRoundOwner;
+    if(result==='correct'){
+      const guesserColor = guessColorOther(myColor);
+      guessScore[guesserColor] = (guessScore[guesserColor]||0) + 1;
+      guessRenderScore();
+      bumpOverall(false);
+      newOwner = guesserColor;
+    }
+    if(conn && conn.open){
+      conn.send({type:'guessFeedback', value:value, result:result, attempts:guessAttempts, scoreRed:guessScore.red, scoreYellow:guessScore.yellow, newOwner:newOwner});
+    }
+    if(result==='correct'){
+      guessRoundOwner = newOwner; guessSecret = null; guessAttempts = 0;
+      guessRenderRoles();
+    }
+  }
+
+  // ================= WOULD YOU RATHER =================
+  const WYR_PROMPTS = [
+    ["Vacation in the mountains","Vacation at the beach"],
+    ["Have unlimited money","Have unlimited free time"],
+    ["Always be 10 minutes late","Always be 20 minutes early"],
+    ["Give up spicy food","Give up sweet food"],
+    ["Live without music","Live without movies"],
+    ["Be famous","Be rich but unknown"],
+    ["Travel to the past","Travel to the future"],
+    ["Only text, never call","Only call, never text"],
+    ["Always be too hot","Always be too cold"],
+    ["Have super strength","Have super speed"],
+    ["Lose your phone for a week","Lose your wallet for a week"],
+    ["Only eat your favorite food forever","Never eat your favorite food again"],
+    ["Live in a big city","Live in the countryside"],
+    ["Be able to fly","Be invisible"],
+    ["Read minds","See the future"]
+  ];
+  const wyrPrompt = document.getElementById('wyrPrompt');
+  const wyrBtnA = document.getElementById('wyrBtnA');
+  const wyrBtnB = document.getElementById('wyrBtnB');
+  const wyrResult = document.getElementById('wyrResult');
+  const wyrScoreLine = document.getElementById('wyrScoreLine');
+  const wyrNextBtn = document.getElementById('wyrNextBtn');
+  let wyrIdx = -1, wyrMyPick = null, wyrTheirPick = null, wyrMatches = 0;
+
+  function wyrReset(){
+    wyrIdx = -1; wyrMyPick = null; wyrTheirPick = null; wyrMatches = 0;
+    wyrPrompt.textContent = 'Click Next Question to start';
+    wyrBtnA.textContent = 'A'; wyrBtnB.textContent = 'B';
+    wyrBtnA.classList.remove('picked'); wyrBtnB.classList.remove('picked');
+    wyrResult.textContent = '';
+    wyrScoreLine.textContent = 'Matched — 0 times';
+  }
+  function wyrShowQuestion(idx){
+    wyrIdx = idx; wyrMyPick = null; wyrTheirPick = null;
+    wyrPrompt.textContent = 'Would you rather...';
+    wyrBtnA.textContent = 'A: ' + WYR_PROMPTS[idx][0];
+    wyrBtnB.textContent = 'B: ' + WYR_PROMPTS[idx][1];
+    wyrBtnA.classList.remove('picked'); wyrBtnB.classList.remove('picked');
+    wyrResult.textContent = '';
+  }
+  wyrNextBtn.addEventListener('click', () => {
+    const idx = Math.floor(Math.random()*WYR_PROMPTS.length);
+    wyrShowQuestion(idx);
+    if(conn && conn.open) conn.send({type:'wyrNewPrompt', idx: idx});
+  });
+  function wyrPick(choice){
+    if(wyrMyPick || wyrIdx===-1) return;
+    wyrMyPick = choice;
+    if(conn && conn.open) conn.send({type:'wyrPick', choice: choice});
+    wyrCheckReveal();
+  }
+  wyrBtnA.addEventListener('click', () => wyrPick('A'));
+  wyrBtnB.addEventListener('click', () => wyrPick('B'));
+  function wyrCheckReveal(){
+    if(!wyrMyPick || !wyrTheirPick) return;
+    wyrBtnA.classList.toggle('picked', wyrMyPick==='A');
+    wyrBtnB.classList.toggle('picked', wyrMyPick==='B');
+    if(wyrMyPick===wyrTheirPick){
+      wyrMatches++;
+      wyrResult.textContent = '🎉 You both picked ' + wyrMyPick + '! You matched.';
+    } else {
+      wyrResult.textContent = 'You picked ' + wyrMyPick + ', they picked ' + wyrTheirPick + '. No match this time.';
+    }
+    wyrScoreLine.textContent = 'Matched — ' + wyrMatches + ' times';
+  }
+
+  // ================= MEMORY MATCH =================
+  const memoryGrid = document.getElementById('memoryGrid');
+  const memoryScoreLine = document.getElementById('memoryScoreLine');
+  const memoryBanner = document.getElementById('memoryBanner');
+  const MEMORY_SYMBOLS = ['🍕','🎮','🎧','⚽','🎲','🌟','🍩','🚀'];
+  let memoryState = null;
+
+  function memoryFreshDeck(){
+    let deck = [...MEMORY_SYMBOLS, ...MEMORY_SYMBOLS];
+    for(let i=deck.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      const tmp = deck[i]; deck[i]=deck[j]; deck[j]=tmp;
+    }
+    return deck;
+  }
+  function memoryFreshState(){
+    return { deck: memoryFreshDeck(), matched: Array(16).fill(false), turn:'red', scoreRed:0, scoreYellow:0, flipped: [] };
+  }
+  function memorySend(){
+    if(conn && conn.open) conn.send({type:'memoryState', state: memoryState});
+  }
+  function memoryRender(){
+    if(!memoryState){
+      memoryGrid.innerHTML = '';
+      memoryBanner.textContent = 'Setting up board...';
+      memoryBanner.className = 'turn-banner';
+      return;
+    }
+    memoryGrid.innerHTML = '';
+    memoryState.deck.forEach((sym, i) => {
+      const card = document.createElement('div');
+      const shown = memoryState.matched[i] || memoryState.flipped.indexOf(i)!==-1;
+      card.className = 'memory-card' + (memoryState.matched[i] ? ' matched' : (shown ? ' flipped' : ''));
+      card.textContent = shown ? sym : '❓';
+      card.addEventListener('click', () => memoryClick(i));
+      memoryGrid.appendChild(card);
+    });
+    const myScoreKey = myColor==='red' ? 'scoreRed' : 'scoreYellow';
+    const theirScoreKey = oppColor==='red' ? 'scoreRed' : 'scoreYellow';
+    memoryScoreLine.textContent = 'Pairs — You: ' + (memoryState[myScoreKey]||0) + ' · Opponent: ' + (memoryState[theirScoreKey]||0);
+    const allMatched = memoryState.matched.every(m=>m);
+    memoryBanner.classList.remove('celebrate');
+    if(allMatched){
+      const myScore = memoryState[myScoreKey]||0, theirScore = memoryState[theirScoreKey]||0;
+      if(myScore===theirScore){ memoryBanner.textContent = "It's a tie!"; memoryBanner.className = 'turn-banner turn-over'; }
+      else { const iWon = myScore>theirScore; memoryBanner.textContent = (iWon ? '🏆 You win the board!' : '🏆 ' + theirName + ' wins the board!'); memoryBanner.className = 'turn-banner turn-over celebrate'; }
+    } else if(memoryState.turn===myColor){
+      memoryBanner.textContent = 'Your turn — flip two cards';
+      memoryBanner.className = 'turn-banner turn-you';
+    } else {
+      memoryBanner.textContent = theirName + "'s turn...";
+      memoryBanner.className = 'turn-banner turn-them';
+    }
+  }
+  function memoryClick(idx){
+    if(!memoryState) return;
+    if(memoryState.turn!==myColor) return;
+    if(memoryState.matched[idx]) return;
+    if(memoryState.flipped.indexOf(idx)!==-1) return;
+    if(memoryState.flipped.length>=2) return;
+    memoryState.flipped.push(idx);
+    memoryRender();
+    if(memoryState.flipped.length===2){
+      memorySend();
+      const a = memoryState.flipped[0], b = memoryState.flipped[1];
+      const isMatch = memoryState.deck[a]===memoryState.deck[b];
+      const actingColor = memoryState.turn;
+      setTimeout(() => {
+        const wasComplete = memoryState.matched.every(m=>m);
+        if(isMatch){
+          memoryState.matched[a]=true; memoryState.matched[b]=true;
+          const key = actingColor==='red' ? 'scoreRed' : 'scoreYellow';
+          memoryState[key] = (memoryState[key]||0) + 1;
+        } else {
+          memoryState.turn = actingColor==='red' ? 'yellow' : 'red';
+        }
+        memoryState.flipped = [];
+        memoryRender();
+        memorySend();
+        const nowComplete = memoryState.matched.every(m=>m);
+        if(nowComplete && !wasComplete && memoryState.scoreRed!==memoryState.scoreYellow){
+          const winnerColor = memoryState.scoreRed>memoryState.scoreYellow ? 'red' : 'yellow';
+          bumpOverall(winnerColor===myColor);
+        }
+      }, 900);
+    } else {
+      memorySend();
+    }
+  }
+  document.getElementById('memoryRematchBtn').addEventListener('click', () => {
+    memoryState = memoryFreshState();
+    memoryRender();
+    memorySend();
   });
 
   // ---------- Chat ----------
@@ -1296,6 +1825,14 @@
   }
   sendChatBtn.addEventListener('click', sendChat);
   chatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') sendChat(); });
+  let lastTypingSent = 0;
+  chatInput.addEventListener('input', () => {
+    const now = Date.now();
+    if(now - lastTypingSent > 1200){
+      lastTypingSent = now;
+      if(conn && conn.open) conn.send({type:'typing'});
+    }
+  });
 
 })();
 </script>
