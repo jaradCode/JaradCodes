@@ -435,6 +435,30 @@
   .draw-guess-hint{text-align:center; font-size:1.3rem; letter-spacing:6px; font-weight:700; color:var(--muted); margin-bottom:10px; min-height:28px;}
   #drawCanvas{width:100%; height:auto; aspect-ratio:4/3; background:#fdfdfd; border-radius:10px; border:2px solid #4338ca; touch-action:none; display:block;}
 
+  /* Truth Meter */
+  .truth-toggle{display:flex; gap:10px; margin-top:10px;}
+  .truth-toggle button{flex:1;}
+  .truth-toggle button.selected{background:linear-gradient(90deg, var(--accent), #6366f1); color:white;}
+  .truth-statement{background:#0f0c29; border-radius:10px; padding:14px; text-align:center; font-size:1.05rem; font-weight:600; margin:14px 0; min-height:50px; display:flex; align-items:center; justify-content:center;}
+  .truth-result{text-align:center; font-size:0.9rem; color:var(--muted); margin-top:10px; min-height:20px;}
+
+  /* Number Duel (Nim) */
+  .nim-pile{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; background:#0f0c29; border-radius:10px; padding:14px; min-height:60px; align-items:center;}
+  .nim-token{width:18px; height:18px; border-radius:4px; background:linear-gradient(135deg, var(--accent), #6366f1);}
+  .nim-controls{display:flex; gap:10px; margin-top:14px;}
+  .nim-controls button{flex:1;}
+
+  /* Countdown Math */
+  .math-target{text-align:center; font-size:2.4rem; font-weight:800; color:var(--accent2); margin:10px 0;}
+  .math-input-row{display:flex; gap:8px; margin-top:10px;}
+  .math-input-row input{flex:1;}
+  .math-feedback{text-align:center; font-size:0.9rem; color:var(--muted); margin-top:10px; min-height:20px;}
+
+  /* Color Match */
+  .color-trial{text-align:center; font-size:2.6rem; font-weight:800; padding:30px 10px; background:#0f0c29; border-radius:12px; margin:10px 0; min-height:60px; display:flex; align-items:center; justify-content:center;}
+  .color-buttons{display:flex; gap:10px;}
+  .color-buttons button{flex:1;}
+
   /* Typing indicator */
   .typing-indicator{font-size:0.75rem; color:var(--muted); font-style:italic; min-height:16px; margin-bottom:4px;}
 
@@ -552,6 +576,10 @@
     <button class="tab-btn" data-game="wyr">🤔 Would You Rather</button>
     <button class="tab-btn" data-game="memory">🧠 Memory Match</button>
     <button class="tab-btn" data-game="draw">🎨 Draw It</button>
+    <button class="tab-btn" data-game="truth">🤥 Truth Meter</button>
+    <button class="tab-btn" data-game="nim">🪵 Number Duel</button>
+    <button class="tab-btn" data-game="math">🧮 Countdown Math</button>
+    <button class="tab-btn" data-game="colormatch">🌈 Color Match</button>
   </div>
 
   <div class="game-wrap">
@@ -689,6 +717,76 @@
         <div class="draw-guess-hint" id="drawGuessHint"></div>
         <canvas id="drawCanvas" width="400" height="300"></canvas>
         <div class="score-line" id="drawScoreLine">Words guessed — You: 0 · Opponent: 0</div>
+      </div>
+
+      <!-- Truth Meter -->
+      <div id="panel-truth" class="board-panel">
+        <div class="turn-banner" id="truthBanner">Connecting...</div>
+        <div class="help-text">One of you writes a statement and marks it true or false — the other guesses which. Fool them and you score; guess right and they don't. Roles swap each round.</div>
+        <div id="truthSharerArea">
+          <input type="text" id="truthStatementInput" placeholder="Write a true or false statement..." maxlength="120">
+          <div class="truth-toggle">
+            <button id="truthMarkTrueBtn">This is TRUE</button>
+            <button id="truthMarkFalseBtn">This is FALSE</button>
+          </div>
+          <button class="btn-primary" id="truthSubmitBtn" disabled>Send Statement</button>
+        </div>
+        <div id="truthGuesserArea" style="display:none;">
+          <div class="truth-statement" id="truthStatementDisplay">Waiting for a statement...</div>
+          <div class="truth-toggle">
+            <button id="truthGuessTrueBtn">I think TRUE</button>
+            <button id="truthGuessFalseBtn">I think FALSE</button>
+          </div>
+        </div>
+        <div class="truth-result" id="truthResult"></div>
+        <div class="score-line" id="truthScoreLine">Score — You: 0 · Opponent: 0</div>
+      </div>
+
+      <!-- Number Duel (Nim) -->
+      <div id="panel-nim" class="board-panel">
+        <div class="turn-banner" id="nimBanner">Connecting...</div>
+        <div class="help-text">Take turns removing 1, 2, or 3 tokens from the shared pile. Whoever takes the last token wins the round.</div>
+        <div class="nim-pile" id="nimPileEl"></div>
+        <div class="nim-controls">
+          <button class="btn-primary" id="nimTake1Btn">Take 1</button>
+          <button class="btn-primary" id="nimTake2Btn">Take 2</button>
+          <button class="btn-primary" id="nimTake3Btn">Take 3</button>
+        </div>
+        <div class="score-line" id="nimScoreLine">Wins — You: 0 · Opponent: 0</div>
+        <div class="controls-row">
+          <button class="btn-secondary" id="nimRematchBtn">🔄 New Pile</button>
+        </div>
+      </div>
+
+      <!-- Countdown Math -->
+      <div id="panel-math" class="board-panel">
+        <div class="turn-banner" id="mathBanner">Connecting...</div>
+        <div class="help-text">A target number appears — race to type an equation that equals it. First correct answer wins the round.</div>
+        <div class="math-target" id="mathTargetEl">—</div>
+        <div class="math-input-row">
+          <input type="text" id="mathInput" placeholder="e.g. 6*7+3" disabled>
+          <button class="btn-primary" id="mathSubmitBtn" disabled>Submit</button>
+        </div>
+        <div class="math-feedback" id="mathFeedback"></div>
+        <div class="score-line" id="mathScoreLine">Wins — You: 0 · Opponent: 0</div>
+        <div class="controls-row">
+          <button class="btn-secondary" id="mathNewRoundBtn">🎯 New Target</button>
+        </div>
+      </div>
+
+      <!-- Color Match -->
+      <div id="panel-colormatch" class="board-panel">
+        <div class="turn-banner" id="colorBanner">First to 5 wins the duel 🌈</div>
+        <div class="help-text">Both hit "I'm Ready". A color word flashes in a colored font — hit Match if the word and its color are the same, No Match if they differ. Fastest correct answer scores.</div>
+        <div class="color-trial" id="colorTrialEl">Click "I'm Ready" to begin</div>
+        <div class="color-buttons">
+          <button class="btn-primary" id="colorMatchBtn" disabled>✅ Match</button>
+          <button class="btn-secondary" id="colorNoMatchBtn" disabled>❌ No Match</button>
+        </div>
+        <div class="controls-row">
+          <button class="btn-primary" id="colorReadyBtn">I'm Ready</button>
+        </div>
+        <div class="score-line" id="colorScoreLine">Score — You: 0 · Opponent: 0</div>
       </div>
 
     </div>
@@ -953,6 +1051,10 @@
     if(isHost){ memoryState = memoryFreshState(); memorySend(); }
     memoryRender();
     drawInit();
+    truthInit();
+    nimInit();
+    mathInit();
+    colorInit();
     switchTab('c4', false);
   }
 
@@ -1052,6 +1154,35 @@
       bumpOverall(iWon);
       addSystemMsg((iWon ? 'You' : theirName) + ' guessed it! The word was "' + data.word + '"');
       drawRender();
+    } else if(data.type === 'truthStatement'){
+      truthHandleStatement(data.text);
+    } else if(data.type === 'truthGuess'){
+      truthHandleGuess(data.guess);
+    } else if(data.type === 'truthReveal'){
+      truthApplyReveal(data);
+    } else if(data.type === 'nimMove'){
+      nimApplyMove(data.n, false);
+    } else if(data.type === 'nimRematch'){
+      nimInit();
+      addSystemMsg('New pile started.');
+    } else if(data.type === 'mathNewRound'){
+      mathTarget = data.target; mathOver = false; mathInput.value=''; mathFeedback.textContent='';
+      mathRender();
+    } else if(data.type === 'mathWin'){
+      if(!mathOver){
+        mathOver = true;
+        mathScore.red = data.scoreRed; mathScore.yellow = data.scoreYellow;
+        const iWonMath = data.winner === myColor;
+        bumpOverall(iWonMath);
+        addSystemMsg((iWonMath ? 'You' : theirName) + ' solved it! ' + data.expr + ' = ' + mathTarget);
+        mathRender();
+      }
+    } else if(data.type === 'colorReady'){
+      colorReadyThem = true; colorMaybeStart();
+    } else if(data.type === 'colorGo'){
+      colorStartTrial(data.trial);
+    } else if(data.type === 'colorResult'){
+      colorTheirCorrect = data.correct; colorTheirTime = data.time; colorMaybeFinish();
     }
   }
 
@@ -2052,6 +2183,370 @@
     } else {
       drawBanner.textContent = drawGuessed ? 'Waiting for ' + theirName + ' to start a new round...' : theirName + ' is drawing — guess in chat!';
       drawBanner.className = 'turn-banner turn-them';
+    }
+  }
+
+  // ---------- Truth Meter ----------
+  const truthSharerArea = document.getElementById('truthSharerArea');
+  const truthGuesserArea = document.getElementById('truthGuesserArea');
+  const truthStatementInput = document.getElementById('truthStatementInput');
+  const truthMarkTrueBtn = document.getElementById('truthMarkTrueBtn');
+  const truthMarkFalseBtn = document.getElementById('truthMarkFalseBtn');
+  const truthSubmitBtn = document.getElementById('truthSubmitBtn');
+  const truthStatementDisplay = document.getElementById('truthStatementDisplay');
+  const truthGuessTrueBtn = document.getElementById('truthGuessTrueBtn');
+  const truthGuessFalseBtn = document.getElementById('truthGuessFalseBtn');
+  const truthResultEl = document.getElementById('truthResult');
+  const truthScoreLine = document.getElementById('truthScoreLine');
+  const truthBanner = document.getElementById('truthBanner');
+
+  let truthOwner = 'red';
+  let truthMarkedActual = null;
+  let truthPendingText = '';
+  let truthCurrentActual = null;
+  let truthAwaitingGuess = false;
+  let truthScore = { red:0, yellow:0 };
+
+  function truthInit(){
+    truthOwner = 'red';
+    truthMarkedActual = null;
+    truthPendingText = '';
+    truthCurrentActual = null;
+    truthAwaitingGuess = false;
+    truthScore = { red:0, yellow:0 };
+    truthStatementInput.value = '';
+    truthResultEl.textContent = '';
+    truthMarkTrueBtn.classList.remove('selected');
+    truthMarkFalseBtn.classList.remove('selected');
+    truthGuessTrueBtn.disabled = false; truthGuessFalseBtn.disabled = false;
+    truthRender();
+  }
+  function truthIsSharer(){ return truthOwner === myColor; }
+  function truthUpdateSubmitState(){
+    truthSubmitBtn.disabled = !(truthStatementInput.value.trim() && truthMarkedActual !== null);
+  }
+  truthStatementInput.addEventListener('input', truthUpdateSubmitState);
+  truthMarkTrueBtn.addEventListener('click', () => { truthMarkedActual = true; truthMarkTrueBtn.classList.add('selected'); truthMarkFalseBtn.classList.remove('selected'); truthUpdateSubmitState(); });
+  truthMarkFalseBtn.addEventListener('click', () => { truthMarkedActual = false; truthMarkFalseBtn.classList.add('selected'); truthMarkTrueBtn.classList.remove('selected'); truthUpdateSubmitState(); });
+
+  truthSubmitBtn.addEventListener('click', () => {
+    if(!truthIsSharer()) return;
+    const text = truthStatementInput.value.trim();
+    if(!text || truthMarkedActual===null) return;
+    truthCurrentActual = truthMarkedActual;
+    truthAwaitingGuess = true;
+    if(conn && conn.open) conn.send({type:'truthStatement', text: text});
+    truthResultEl.textContent = 'Waiting for their guess...';
+    truthRender();
+  });
+
+  truthGuessTrueBtn.addEventListener('click', () => truthSubmitGuess(true));
+  truthGuessFalseBtn.addEventListener('click', () => truthSubmitGuess(false));
+  function truthSubmitGuess(guess){
+    if(truthIsSharer() || !truthPendingText) return;
+    if(conn && conn.open) conn.send({type:'truthGuess', guess: guess});
+    truthResultEl.textContent = 'Answer sent — waiting for reveal...';
+    truthGuessTrueBtn.disabled = true; truthGuessFalseBtn.disabled = true;
+  }
+  function truthHandleStatement(text){
+    truthPendingText = text;
+    truthStatementDisplay.textContent = text;
+    truthGuessTrueBtn.disabled = false; truthGuessFalseBtn.disabled = false;
+    truthResultEl.textContent = '';
+    truthRender();
+  }
+  function truthHandleGuess(guess){
+    if(!truthIsSharer() || !truthAwaitingGuess) return;
+    const correct = (guess === truthCurrentActual);
+    const winner = correct ? oppColor : myColor;
+    const winnerKey = winner === 'red' ? 'red' : 'yellow';
+    truthScore[winnerKey] = (truthScore[winnerKey]||0) + 1;
+    truthAwaitingGuess = false;
+    const newOwner = oppColor;
+    if(conn && conn.open) conn.send({type:'truthReveal', actual: truthCurrentActual, correct: correct, scoreRed: truthScore.red, scoreYellow: truthScore.yellow, newOwner: newOwner});
+    bumpOverall(winner === myColor);
+    truthResultEl.textContent = 'It was ' + (truthCurrentActual ? 'TRUE' : 'FALSE') + ' — ' + (correct ? theirName + ' guessed right!' : theirName + ' was fooled!');
+    truthOwner = newOwner;
+    truthPendingText = '';
+    truthStatementInput.value = '';
+    truthMarkedActual = null;
+    truthMarkTrueBtn.classList.remove('selected'); truthMarkFalseBtn.classList.remove('selected');
+    truthRender();
+  }
+  function truthApplyReveal(data){
+    truthScore.red = data.scoreRed; truthScore.yellow = data.scoreYellow;
+    truthResultEl.textContent = 'It was ' + (data.actual ? 'TRUE' : 'FALSE') + ' — ' + (data.correct ? 'You guessed right! 🎉' : 'You got fooled!');
+    truthOwner = data.newOwner;
+    truthPendingText = '';
+    truthGuessTrueBtn.disabled = false; truthGuessFalseBtn.disabled = false;
+    bumpOverall(data.correct);
+    truthRender();
+  }
+  function truthRender(){
+    const amSharer = truthIsSharer();
+    truthSharerArea.style.display = amSharer ? 'block' : 'none';
+    truthGuesserArea.style.display = amSharer ? 'none' : 'block';
+    if(!amSharer){
+      truthStatementDisplay.textContent = truthPendingText || 'Waiting for a statement...';
+    }
+    const myKey = myColor==='red'?'red':'yellow', oppKey = oppColor==='red'?'red':'yellow';
+    truthScoreLine.textContent = 'Score — You: ' + (truthScore[myKey]||0) + ' · Opponent: ' + (truthScore[oppKey]||0);
+    truthBanner.classList.remove('celebrate');
+    if(amSharer){
+      truthBanner.textContent = truthAwaitingGuess ? 'Waiting for their guess...' : "Write a statement and mark if it's true or false";
+      truthBanner.className = 'turn-banner turn-you';
+    } else {
+      truthBanner.textContent = truthPendingText ? 'Guess: true or false?' : 'Waiting for ' + theirName + ' to write a statement...';
+      truthBanner.className = 'turn-banner turn-them';
+    }
+  }
+
+  // ---------- Number Duel (Nim) ----------
+  const nimPileEl = document.getElementById('nimPileEl');
+  const nimTake1Btn = document.getElementById('nimTake1Btn');
+  const nimTake2Btn = document.getElementById('nimTake2Btn');
+  const nimTake3Btn = document.getElementById('nimTake3Btn');
+  const nimScoreLine = document.getElementById('nimScoreLine');
+  const nimBanner = document.getElementById('nimBanner');
+
+  const NIM_START = 21;
+  let nimPile = NIM_START;
+  let nimTurn = 'red';
+  let nimOver = false;
+  let nimScore = { red:0, yellow:0 };
+
+  function nimInit(){
+    nimPile = NIM_START; nimTurn = 'red'; nimOver = false;
+    nimRender();
+  }
+  function nimApplyMove(n, isMine){
+    if(nimOver) return;
+    nimPile = Math.max(0, nimPile - n);
+    if(isMine && conn && conn.open) conn.send({type:'nimMove', n: n});
+    if(nimPile === 0){
+      nimOver = true;
+      const winnerColor = nimTurn;
+      const winnerKey = winnerColor==='red'?'red':'yellow';
+      nimScore[winnerKey] = (nimScore[winnerKey]||0) + 1;
+      bumpOverall(winnerColor === myColor);
+      addSystemMsg((winnerColor===myColor?'You':theirName) + ' took the last token and won the round!');
+    } else {
+      nimTurn = nimTurn === 'red' ? 'yellow' : 'red';
+    }
+    nimRender();
+  }
+  [nimTake1Btn,nimTake2Btn,nimTake3Btn].forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      const n = i+1;
+      if(nimOver || nimTurn !== myColor || n > nimPile) return;
+      nimApplyMove(n, true);
+    });
+  });
+  document.getElementById('nimRematchBtn').addEventListener('click', () => {
+    nimInit();
+    if(conn && conn.open) conn.send({type:'nimRematch'});
+    addSystemMsg('New pile started.');
+  });
+  function nimRender(){
+    nimPileEl.innerHTML = '';
+    for(let i=0;i<nimPile;i++){
+      const tok = document.createElement('div');
+      tok.className = 'nim-token';
+      nimPileEl.appendChild(tok);
+    }
+    const myKey = myColor==='red'?'red':'yellow', oppKey = oppColor==='red'?'red':'yellow';
+    nimScoreLine.textContent = 'Wins — You: ' + (nimScore[myKey]||0) + ' · Opponent: ' + (nimScore[oppKey]||0);
+    const canPlay = !nimOver && nimTurn===myColor;
+    nimTake1Btn.disabled = !canPlay || nimPile<1;
+    nimTake2Btn.disabled = !canPlay || nimPile<2;
+    nimTake3Btn.disabled = !canPlay || nimPile<3;
+    nimBanner.classList.remove('celebrate');
+    if(nimOver){
+      nimBanner.textContent = 'Round over — click New Pile to play again';
+      nimBanner.className = 'turn-banner turn-over';
+    } else if(nimTurn===myColor){
+      nimBanner.textContent = 'Your turn — take 1, 2 or 3 (pile: ' + nimPile + ')';
+      nimBanner.className = 'turn-banner turn-you';
+    } else {
+      nimBanner.textContent = theirName + "'s turn... (pile: " + nimPile + ')';
+      nimBanner.className = 'turn-banner turn-them';
+    }
+  }
+
+  // ---------- Countdown Math ----------
+  const mathTargetEl = document.getElementById('mathTargetEl');
+  const mathInput = document.getElementById('mathInput');
+  const mathSubmitBtn = document.getElementById('mathSubmitBtn');
+  const mathFeedback = document.getElementById('mathFeedback');
+  const mathScoreLine = document.getElementById('mathScoreLine');
+  const mathBanner = document.getElementById('mathBanner');
+  const mathNewRoundBtn = document.getElementById('mathNewRoundBtn');
+
+  let mathTarget = null;
+  let mathOver = true;
+  let mathScore = { red:0, yellow:0 };
+
+  function mathInit(){
+    mathTarget = null; mathOver = true; mathScore = { red:0, yellow:0 };
+    mathInput.value = ''; mathFeedback.textContent = '';
+    mathRender();
+  }
+  mathNewRoundBtn.addEventListener('click', () => {
+    const target = 10 + Math.floor(Math.random()*90);
+    mathTarget = target; mathOver = false;
+    mathInput.value = ''; mathFeedback.textContent = '';
+    if(conn && conn.open) conn.send({type:'mathNewRound', target: target});
+    mathRender();
+  });
+  function mathEval(expr){
+    if(!/^[0-9+\-*/(). ]+$/.test(expr)) return null;
+    try {
+      const result = Function('"use strict"; return (' + expr + ')')();
+      return (typeof result === 'number' && isFinite(result)) ? result : null;
+    } catch(e){ return null; }
+  }
+  mathSubmitBtn.addEventListener('click', mathTrySubmit);
+  mathInput.addEventListener('keydown', (e) => { if(e.key==='Enter') mathTrySubmit(); });
+  function mathTrySubmit(){
+    if(mathOver || mathTarget===null) return;
+    const expr = mathInput.value.trim();
+    if(!expr) return;
+    const result = mathEval(expr);
+    if(result === null){ mathFeedback.textContent = 'Not a valid expression.'; return; }
+    if(Math.abs(result - mathTarget) < 0.0001){
+      mathOver = true;
+      const winnerKey = myColor==='red'?'red':'yellow';
+      mathScore[winnerKey] = (mathScore[winnerKey]||0) + 1;
+      bumpOverall(true);
+      if(conn && conn.open) conn.send({type:'mathWin', expr: expr, scoreRed: mathScore.red, scoreYellow: mathScore.yellow, winner: myColor});
+      addSystemMsg('You solved it! ' + expr + ' = ' + mathTarget);
+      mathRender();
+    } else {
+      mathFeedback.textContent = expr + ' = ' + result + ' — not quite, try again.';
+    }
+  }
+  function mathRender(){
+    mathTargetEl.textContent = mathTarget===null ? '—' : mathTarget;
+    mathInput.disabled = mathOver || mathTarget===null;
+    mathSubmitBtn.disabled = mathOver || mathTarget===null;
+    const myKey = myColor==='red'?'red':'yellow', oppKey = oppColor==='red'?'red':'yellow';
+    mathScoreLine.textContent = 'Wins — You: ' + (mathScore[myKey]||0) + ' · Opponent: ' + (mathScore[oppKey]||0);
+    mathBanner.classList.remove('celebrate');
+    if(mathTarget===null){
+      mathBanner.textContent = 'Click New Target to start';
+      mathBanner.className = 'turn-banner';
+    } else if(mathOver){
+      mathBanner.textContent = 'Round over — click New Target for the next one';
+      mathBanner.className = 'turn-banner turn-over';
+    } else {
+      mathBanner.textContent = 'Race to hit the target! ⚡';
+      mathBanner.className = 'turn-banner turn-you';
+    }
+  }
+
+  // ---------- Color Match ----------
+  const colorTrialEl = document.getElementById('colorTrialEl');
+  const colorMatchBtn = document.getElementById('colorMatchBtn');
+  const colorNoMatchBtn = document.getElementById('colorNoMatchBtn');
+  const colorReadyBtn = document.getElementById('colorReadyBtn');
+  const colorScoreLine = document.getElementById('colorScoreLine');
+  const colorBanner = document.getElementById('colorBanner');
+
+  const COLOR_NAMES = ['RED','BLUE','GREEN','YELLOW','PURPLE','ORANGE'];
+  const COLOR_HEX = { RED:'#ef4444', BLUE:'#3b82f6', GREEN:'#22c55e', YELLOW:'#eab308', PURPLE:'#a855f7', ORANGE:'#f97316' };
+
+  let colorReadyMe = false, colorReadyThem = false;
+  let colorPhase = 'idle';
+  let colorTrial = null;
+  let colorStartTs = 0;
+  let colorMyCorrect = null, colorMyTime = null;
+  let colorTheirCorrect = null, colorTheirTime = null;
+  let colorScore = { red:0, yellow:0 };
+
+  function colorInit(){
+    colorReadyMe=false; colorReadyThem=false; colorPhase='idle'; colorTrial=null;
+    colorMyCorrect=null; colorMyTime=null; colorTheirCorrect=null; colorTheirTime=null;
+    colorScore = { red:0, yellow:0 };
+    colorReadyBtn.style.display = 'inline-block';
+    colorRender();
+  }
+  colorReadyBtn.addEventListener('click', () => {
+    if(colorScore.red>=5 || colorScore.yellow>=5) return;
+    colorReadyMe = true;
+    colorPhase = 'waiting';
+    colorReadyBtn.style.display = 'none';
+    if(conn && conn.open) conn.send({type:'colorReady'});
+    colorRender();
+    colorMaybeStart();
+  });
+  function colorMaybeStart(){
+    if(isHost && colorReadyMe && colorReadyThem && colorPhase==='waiting'){
+      const word = COLOR_NAMES[Math.floor(Math.random()*COLOR_NAMES.length)];
+      const isMatch = Math.random() < 0.5;
+      let colorKey = word;
+      if(!isMatch){
+        const others = COLOR_NAMES.filter(c => c!==word);
+        colorKey = others[Math.floor(Math.random()*others.length)];
+      }
+      const trial = { word: word, colorKey: colorKey, isMatch: isMatch };
+      if(conn && conn.open) conn.send({type:'colorGo', trial: trial});
+      colorStartTrial(trial);
+    }
+  }
+  function colorStartTrial(trial){
+    colorTrial = trial;
+    colorPhase = 'live';
+    colorStartTs = performance.now();
+    colorMyCorrect = null; colorMyTime = null; colorTheirCorrect = null; colorTheirTime = null;
+    colorRender();
+  }
+  function colorAnswer(saysMatch){
+    if(colorPhase!=='live' || colorMyCorrect!==null) return;
+    const correct = (saysMatch === colorTrial.isMatch);
+    colorMyCorrect = correct;
+    colorMyTime = Math.round(performance.now() - colorStartTs);
+    if(conn && conn.open) conn.send({type:'colorResult', correct: correct, time: colorMyTime});
+    colorPhase = 'result';
+    colorRender();
+    colorMaybeFinish();
+  }
+  colorMatchBtn.addEventListener('click', () => colorAnswer(true));
+  colorNoMatchBtn.addEventListener('click', () => colorAnswer(false));
+  function colorMaybeFinish(){
+    if(colorMyCorrect===null || colorTheirCorrect===null) return;
+    let iWon = null;
+    if(colorMyCorrect && colorTheirCorrect) iWon = colorMyTime <= colorTheirTime;
+    else if(colorMyCorrect) iWon = true;
+    else if(colorTheirCorrect) iWon = false;
+    if(iWon===true){ colorScore[myColor]=(colorScore[myColor]||0)+1; addSystemMsg('You got it first! 🌈'); bumpOverall(true); }
+    else if(iWon===false){ colorScore[oppColor]=(colorScore[oppColor]||0)+1; addSystemMsg(theirName + ' got it first.'); bumpOverall(false); }
+    else { addSystemMsg('Both missed that one!'); }
+    colorReadyBtn.style.display = 'inline-block';
+    colorReadyMe = false; colorReadyThem = false; colorPhase='idle'; colorTrial=null;
+    colorRender();
+  }
+  function colorRender(){
+    colorScoreLine.textContent = 'Score — You: ' + (colorScore[myColor]||0) + ' · Opponent: ' + (colorScore[oppColor]||0);
+    colorMatchBtn.disabled = colorPhase!=='live';
+    colorNoMatchBtn.disabled = colorPhase!=='live';
+    if(colorPhase==='idle'){
+      colorTrialEl.textContent = 'Click "I\'m Ready" to begin';
+      colorTrialEl.style.color = 'var(--text)';
+    } else if(colorPhase==='waiting'){
+      colorTrialEl.textContent = 'Waiting for opponent to ready up...';
+      colorTrialEl.style.color = 'var(--text)';
+    } else if(colorTrial){
+      colorTrialEl.textContent = colorTrial.word;
+      colorTrialEl.style.color = COLOR_HEX[colorTrial.colorKey];
+    }
+    colorBanner.classList.remove('celebrate');
+    if(colorScore.red>=5 || colorScore.yellow>=5){
+      const iWonMatch = (colorScore[myColor]||0) >= 5;
+      colorBanner.textContent = iWonMatch ? '🏆 YOU WIN THE DUEL!' : '🏆 ' + theirName + ' WINS THE DUEL!';
+      colorBanner.className = 'turn-banner turn-over celebrate';
+    } else {
+      colorBanner.textContent = 'First to 5 wins the duel 🌈';
+      colorBanner.className = 'turn-banner';
     }
   }
 
