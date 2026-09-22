@@ -428,6 +428,13 @@
   .memory-card.flipped{background:linear-gradient(135deg, var(--accent), #6366f1);}
   .memory-card.matched{background:#166534; cursor:default;}
 
+  /* Draw It */
+  .draw-toolbar{display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap;}
+  .draw-toolbar button{flex:0 0 auto; width:auto;}
+  .draw-secret-word{font-weight:700; color:var(--accent2); letter-spacing:2px; background:#0f0c29; padding:6px 12px; border-radius:6px; font-size:0.9rem;}
+  .draw-guess-hint{text-align:center; font-size:1.3rem; letter-spacing:6px; font-weight:700; color:var(--muted); margin-bottom:10px; min-height:28px;}
+  #drawCanvas{width:100%; height:auto; aspect-ratio:4/3; background:#fdfdfd; border-radius:10px; border:2px solid #4338ca; touch-action:none; display:block;}
+
   /* Typing indicator */
   .typing-indicator{font-size:0.75rem; color:var(--muted); font-style:italic; min-height:16px; margin-bottom:4px;}
 
@@ -544,6 +551,7 @@
     <button class="tab-btn" data-game="guess">🔢 Guess Number</button>
     <button class="tab-btn" data-game="wyr">🤔 Would You Rather</button>
     <button class="tab-btn" data-game="memory">🧠 Memory Match</button>
+    <button class="tab-btn" data-game="draw">🎨 Draw It</button>
   </div>
 
   <div class="game-wrap">
@@ -667,6 +675,20 @@
         <div class="controls-row">
           <button class="btn-secondary" id="memoryRematchBtn">🔄 New Board</button>
         </div>
+      </div>
+
+      <!-- Draw It -->
+      <div id="panel-draw" class="board-panel">
+        <div class="turn-banner" id="drawBanner">Connecting...</div>
+        <div class="help-text">One of you draws, the other guesses the word in the chat box. Guess it right and you become the drawer for the next round.</div>
+        <div class="draw-toolbar" id="drawToolbar" style="display:none;">
+          <button class="btn-primary" id="drawNewWordBtn">🎲 New Word</button>
+          <button class="btn-secondary" id="drawClearBtn">🧹 Clear</button>
+          <span class="draw-secret-word" id="drawSecretWord"></span>
+        </div>
+        <div class="draw-guess-hint" id="drawGuessHint"></div>
+        <canvas id="drawCanvas" width="400" height="300"></canvas>
+        <div class="score-line" id="drawScoreLine">Words guessed — You: 0 · Opponent: 0</div>
       </div>
 
     </div>
@@ -930,6 +952,7 @@
     wyrReset();
     if(isHost){ memoryState = memoryFreshState(); memorySend(); }
     memoryRender();
+    drawInit();
     switchTab('c4', false);
   }
 
@@ -942,6 +965,7 @@
     } else if(data.type === 'chat'){
       addMsg(data.text, 'them');
       hideTyping();
+      drawCheckGuess(data.text);
     } else if(data.type === 'typing'){
       showTyping();
     } else if(data.type === 'switchGame'){
@@ -1008,6 +1032,26 @@
         const winnerColor = memoryState.scoreRed > memoryState.scoreYellow ? 'red' : 'yellow';
         bumpOverall(winnerColor === myColor);
       }
+    } else if(data.type === 'drawStroke'){
+      drawLineSegment(drawCtx, data.x1, data.y1, data.x2, data.y2);
+    } else if(data.type === 'drawNewRound'){
+      drawWordLength = data.wordLength;
+      drawGuessed = false;
+      drawWord = null;
+      drawClearCanvas();
+      drawRender();
+    } else if(data.type === 'drawClear'){
+      drawClearCanvas();
+    } else if(data.type === 'drawCorrect'){
+      drawWord = data.word;
+      drawScore.red = data.scoreRed;
+      drawScore.yellow = data.scoreYellow;
+      drawOwner = data.newDrawer;
+      drawGuessed = true;
+      const iWon = data.newDrawer === myColor;
+      bumpOverall(iWon);
+      addSystemMsg((iWon ? 'You' : theirName) + ' guessed it! The word was "' + data.word + '"');
+      drawRender();
     }
   }
 
@@ -1029,6 +1073,7 @@
     document.getElementById('panel-'+game).classList.add('active');
     document.querySelector('.tab-btn[data-game="'+game+'"]').classList.add('active');
     currentGame = game;
+    if(game==='draw') drawRender();
     if(broadcast && conn && conn.open) conn.send({type:'switchGame', game});
   }
 
@@ -1867,6 +1912,149 @@
     memorySend();
   });
 
+  const drawCanvas = document.getElementById('drawCanvas');
+  const drawCtx = drawCanvas.getContext('2d');
+  const drawToolbar = document.getElementById('drawToolbar');
+  const drawNewWordBtn = document.getElementById('drawNewWordBtn');
+  const drawClearBtn = document.getElementById('drawClearBtn');
+  const drawSecretWordEl = document.getElementById('drawSecretWord');
+  const drawGuessHint = document.getElementById('drawGuessHint');
+  const drawScoreLine = document.getElementById('drawScoreLine');
+  const drawBanner = document.getElementById('drawBanner');
+
+  const DRAW_WORDS = ['pizza','guitar','elephant','rainbow','castle','robot','banana','umbrella','dragon','bicycle','snowman','rocket','octopus','sandwich','volcano','penguin','cactus','ladder','butterfly','anchor','pirate','waterfall','skateboard','telescope','jellyfish','campfire','lighthouse','dinosaur','helicopter','mountain'];
+
+  let drawOwner = 'red';
+  let drawWord = null;
+  let drawWordLength = 0;
+  let drawGuessed = true;
+  let drawScore = { red:0, yellow:0 };
+  let drawDrawing = false;
+  let drawLastPoint = null;
+
+  function drawInit(){
+    drawOwner = 'red';
+    drawWord = null;
+    drawWordLength = 0;
+    drawGuessed = true;
+    drawScore = { red:0, yellow:0 };
+    drawClearCanvas();
+    drawRender();
+  }
+
+  function drawClearCanvas(){
+    drawCtx.clearRect(0,0,drawCanvas.width, drawCanvas.height);
+    drawCtx.fillStyle = '#fdfdfd';
+    drawCtx.fillRect(0,0,drawCanvas.width, drawCanvas.height);
+  }
+
+  function drawIsDrawer(){ return drawOwner === myColor; }
+
+  function drawGetPos(e){
+    const rect = drawCanvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * (drawCanvas.width / rect.width),
+      y: (clientY - rect.top) * (drawCanvas.height / rect.height)
+    };
+  }
+
+  function drawLineSegment(ctx, x1,y1,x2,y2){
+    ctx.strokeStyle = '#1e1b4b';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+
+  function drawPointerDown(e){
+    if(!drawIsDrawer() || drawGuessed) return;
+    e.preventDefault();
+    drawDrawing = true;
+    drawLastPoint = drawGetPos(e);
+  }
+  function drawPointerMove(e){
+    if(!drawDrawing || !drawIsDrawer() || drawGuessed) return;
+    e.preventDefault();
+    const p = drawGetPos(e);
+    drawLineSegment(drawCtx, drawLastPoint.x, drawLastPoint.y, p.x, p.y);
+    if(conn && conn.open) conn.send({type:'drawStroke', x1:drawLastPoint.x, y1:drawLastPoint.y, x2:p.x, y2:p.y});
+    drawLastPoint = p;
+  }
+  function drawPointerUp(){ drawDrawing = false; drawLastPoint = null; }
+
+  drawCanvas.addEventListener('mousedown', drawPointerDown);
+  drawCanvas.addEventListener('mousemove', drawPointerMove);
+  window.addEventListener('mouseup', drawPointerUp);
+  drawCanvas.addEventListener('touchstart', drawPointerDown, {passive:false});
+  drawCanvas.addEventListener('touchmove', drawPointerMove, {passive:false});
+  drawCanvas.addEventListener('touchend', drawPointerUp);
+
+  drawNewWordBtn.addEventListener('click', () => {
+    if(!drawIsDrawer()) return;
+    drawWord = DRAW_WORDS[Math.floor(Math.random()*DRAW_WORDS.length)];
+    drawWordLength = drawWord.length;
+    drawGuessed = false;
+    drawClearCanvas();
+    if(conn && conn.open) conn.send({type:'drawNewRound', wordLength: drawWordLength});
+    addSystemMsg('New drawing round started — guess in chat!');
+    drawRender();
+  });
+
+  drawClearBtn.addEventListener('click', () => {
+    if(!drawIsDrawer()) return;
+    drawClearCanvas();
+    if(conn && conn.open) conn.send({type:'drawClear'});
+  });
+
+  function drawCheckGuess(text){
+    if(!drawIsDrawer() || !drawWord || drawGuessed) return;
+    if(text.trim().toLowerCase() === drawWord.toLowerCase()){
+      const winner = oppColor;
+      const winnerKey = winner === 'red' ? 'red' : 'yellow';
+      drawScore[winnerKey] = (drawScore[winnerKey]||0) + 1;
+      drawGuessed = true;
+      drawOwner = winner;
+      bumpOverall(false);
+      if(conn && conn.open) conn.send({type:'drawCorrect', word: drawWord, scoreRed: drawScore.red, scoreYellow: drawScore.yellow, newDrawer: winner});
+      addSystemMsg(theirName + ' guessed it! The word was "' + drawWord + '"');
+      drawRender();
+    }
+  }
+
+  function drawRender(){
+    const amDrawer = drawIsDrawer();
+    drawToolbar.style.display = amDrawer ? 'flex' : 'none';
+    drawCanvas.style.cursor = (amDrawer && !drawGuessed) ? 'crosshair' : 'default';
+    if(amDrawer && drawWord){
+      drawSecretWordEl.textContent = 'Draw: ' + drawWord.toUpperCase();
+    } else {
+      drawSecretWordEl.textContent = '';
+    }
+    if(!amDrawer && drawWordLength && !drawGuessed){
+      drawGuessHint.textContent = Array(drawWordLength).fill('_').join(' ');
+    } else if(drawGuessed && drawWord){
+      drawGuessHint.textContent = drawWord.toUpperCase();
+    } else {
+      drawGuessHint.textContent = '';
+    }
+    const myKey = myColor === 'red' ? 'red' : 'yellow';
+    const oppKey = oppColor === 'red' ? 'red' : 'yellow';
+    drawScoreLine.textContent = 'Words guessed — You: ' + (drawScore[myKey]||0) + ' · Opponent: ' + (drawScore[oppKey]||0);
+    drawBanner.classList.remove('celebrate');
+    if(amDrawer){
+      drawBanner.textContent = drawGuessed ? "You're up — click New Word to start drawing!" : 'You are drawing — they are guessing in chat';
+      drawBanner.className = 'turn-banner turn-you';
+    } else {
+      drawBanner.textContent = drawGuessed ? 'Waiting for ' + theirName + ' to start a new round...' : theirName + ' is drawing — guess in chat!';
+      drawBanner.className = 'turn-banner turn-them';
+    }
+  }
+
   function addMsg(text, who){
     const div = document.createElement('div');
     div.className = 'msg ' + who;
@@ -1905,5 +2093,3 @@
 
 </body>
 </html>
-
-IT'S NOT THAT PERFECT.
