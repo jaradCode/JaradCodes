@@ -305,12 +305,18 @@ const HOME_COL = {
   red:    [[7,1],[7,2],[7,3],[7,4],[7,5]],
   yellow: [[7,13],[7,12],[7,11],[7,10],[7,9]]
 };
+/* green/blue home columns are decorative only (no tokens use them in 2-player mode)
+   — they exist so the board's arms look like a complete, real Ludo cross */
+const HOME_COL_DECOR = {
+  green: [[1,7],[2,7],[3,7],[4,7],[5,7]],
+  blue:  [[13,7],[12,7],[11,7],[10,7],[9,7]]
+};
 const BASE_SLOTS = {
   red:    [[2,2],[2,5],[5,2],[5,5]],
   yellow: [[11,11],[11,14],[14,11],[14,14]]
 };
 const SAFE_IDX = new Set([0,8,13,21,26,34,39,47]);
-const POWER_TILES = {4:'⚡',17:'🔄',30:'🛡️',43:'⚡'};
+const POWER_TILES = {4:'⚡',17:'🔄',30:'🛡️',43:'⚡',10:'⏪',36:'⏪'};
 
 /* ---------------- game state ---------------- */
 function freshState(){
@@ -607,6 +613,20 @@ function applyPower(color,tok,icon){
   } else if(icon==='🛡️'){
     tok.shielded = true;
     pushLog(`🛡️ Power tile! ${labelFor(color)}'s token ${tok.id+1} is shielded.`);
+  } else if(icon==='⏪'){
+    const oppActive = state.tokens[oppColor].filter(t=>t.status==='active' && t.relPos<=50 && !t.shielded);
+    if(oppActive.length){
+      const target = oppActive.reduce((a,b)=> a.relPos>b.relPos?a:b); // furthest-along opponent token
+      const before = target.relPos;
+      target.relPos = Math.max(0, target.relPos-4);
+      if(target.relPos===before){
+        pushLog(`⏪ Power tile! ${labelFor(color)} tried to rewind ${labelFor(oppColor)}, but it was already at the start.`);
+      } else {
+        pushLog(`⏪ Power tile! ${labelFor(color)} knocked ${labelFor(oppColor)}'s token ${target.id+1} backward!`);
+      }
+    } else {
+      pushLog(`⏪ Power tile landed on, but ${labelFor(oppColor)} has no token to rewind.`);
+    }
   }
 }
 
