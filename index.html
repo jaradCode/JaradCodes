@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>J.Codes.Fun</title>
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js';"></script>
 <style>
   :root{
     --bg1:#1e1b4b;
@@ -844,8 +844,28 @@
     setTimeout(startAutoConnect, 2000);
   }
 
+  // Wait for the mqtt library script to finish loading (with a timeout)
+  // instead of assuming it's ready. This is what was crashing before —
+  // "mqtt is not defined" simply meant startAutoConnect ran before the
+  // <script> tag in <head> had finished loading.
+  function waitForMqttLib(callback, attemptsLeft){
+    if(typeof mqtt !== 'undefined'){
+      callback();
+      return;
+    }
+    if(attemptsLeft <= 0){
+      setLobbyStatus('Could not load the connection library. Check your internet connection, disable any ad blocker for this page, then refresh.');
+      return;
+    }
+    setTimeout(() => waitForMqttLib(callback, attemptsLeft - 1), 300);
+  }
+
   function startAutoConnect(){
     setLobbyStatus('Connecting...');
+    waitForMqttLib(reallyStartAutoConnect, 30); // retries for ~9 seconds
+  }
+
+  function reallyStartAutoConnect(){
     if(mqttClient){ try { mqttClient.end(true); } catch(e){} }
     opponentId = null; pairLocked = false; conn.open = false;
     clearInterval(presenceTimer);
