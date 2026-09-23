@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>J.Codes.Fun</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js';"></script>
 <style>
   :root{
     --bg1:#1e1b4b;
@@ -70,19 +70,43 @@
   }
   .subtitle{color:var(--muted); font-size:0.9rem; margin-bottom:18px; text-align:center;}
 
-  /* ---------- Lobby ---------- */
-  #lobby{
+  /* ---------- Connect overlay (shown over the games until a second player joins) ---------- */
+  #connectOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(10,8,30,0.82);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  #connectOverlay.hidden{display:none;}
+  .connect-box{
     background:var(--panel);
     border:1px solid var(--panel-border);
     border-radius:16px;
     padding:28px;
-    max-width:440px;
+    max-width:380px;
     width:100%;
+    text-align:center;
     backdrop-filter:blur(6px);
     box-shadow:0 10px 40px rgba(0,0,0,0.4);
   }
-  .lobby-section{margin-bottom:22px;}
-  .lobby-section h3{margin:0 0 10px; font-size:1rem; color:var(--accent);}
+  .connect-spinner{
+    width:34px; height:34px;
+    border-radius:50%;
+    border:3px solid #3730a3;
+    border-top-color:var(--accent);
+    margin:0 auto 14px;
+    animation:spin 0.9s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .status-line{
+    font-size:0.9rem;
+    color:var(--text);
+    text-align:center;
+  }
   input[type=text]{
     width:100%;
     padding:10px 12px;
@@ -117,23 +141,6 @@
     width:100%;
     margin-top:10px;
   }
-  .share-box{
-    display:flex;
-    gap:8px;
-    margin-top:12px;
-    align-items:center;
-  }
-  .share-box input{flex:1; text-align:center; font-weight:700; letter-spacing:1px;}
-  .copy-btn{background:#312e81; color:var(--text); white-space:nowrap;}
-  .status-line{
-    margin-top:12px;
-    font-size:0.85rem;
-    color:var(--muted);
-    text-align:center;
-    min-height:20px;
-  }
-  hr.sep{border:none; border-top:1px solid #3730a3; margin:20px 0;}
-
   .help-text{
     font-size:0.78rem;
     color:var(--muted);
@@ -144,7 +151,7 @@
 
   /* ---------- Game layout ---------- */
   #game{
-    display:none;
+    display:block;
     width:100%;
     max-width:1000px;
   }
@@ -533,35 +540,11 @@
 <button id="themeToggle" class="theme-toggle" title="Toggle light/dark">🌙</button>
 <div class="subtitle" id="pageSubtitle">Pick a game, connect with a friend, and have some fun. 🎮</div>
 
-<div id="lobby">
-  <div class="lobby-section">
-    <h3>① Enter your name</h3>
-    <input type="text" id="nameInput" placeholder="Your name" maxlength="16">
+<div id="connectOverlay">
+  <div class="connect-box">
+    <div class="connect-spinner"></div>
+    <div class="status-line" id="lobbyStatus">Connecting...</div>
   </div>
-
-  <hr class="sep">
-
-  <div class="lobby-section">
-    <h3>② Start a new game</h3>
-    <button class="btn-primary" id="createBtn">Create Game</button>
-    <div id="shareArea" style="display:none;">
-      <div class="share-box">
-        <input type="text" id="roomCode" readonly>
-        <button class="copy-btn" id="copyBtn">Copy Link</button>
-      </div>
-      <div class="status-line">Send this link over and wait for them to join.</div>
-    </div>
-  </div>
-
-  <hr class="sep">
-
-  <div class="lobby-section">
-    <h3>③ ...or join</h3>
-    <input type="text" id="joinInput" placeholder="Paste game code here">
-    <button class="btn-secondary" id="joinBtn">Join Game</button>
-  </div>
-
-  <div class="status-line" id="lobbyStatus"></div>
 </div>
 
 <div id="game">
@@ -811,37 +794,19 @@
   let myColor = null;
   let oppColor = null;
   let isHost = false;
-  let peer = null;
-  let conn = null;
   let myName = 'You';
   let theirName = 'Opponent';
   let currentGame = 'c4';
 
-  const lobby = document.getElementById('lobby');
+  const connectOverlay = document.getElementById('connectOverlay');
   const gameEl = document.getElementById('game');
-  const nameInput = document.getElementById('nameInput');
-  const createBtn = document.getElementById('createBtn');
-  const joinBtn = document.getElementById('joinBtn');
-  const joinInput = document.getElementById('joinInput');
-  const shareArea = document.getElementById('shareArea');
-  const roomCode = document.getElementById('roomCode');
-  const copyBtn = document.getElementById('copyBtn');
   const lobbyStatus = document.getElementById('lobbyStatus');
   const messagesEl = document.getElementById('messages');
   const chatInput = document.getElementById('chatInput');
   const sendChatBtn = document.getElementById('sendChatBtn');
 
-  function makeId(len){
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let out = '';
-    for(let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
-    return out;
-  }
-
   function setLobbyStatus(text){ lobbyStatus.textContent = text; }
-
-  const savedName = localStorage.getItem('jcf_name');
-  if(savedName){ nameInput.value = savedName; }
+  myName = 'Player' + (1 + Math.floor(Math.random()*98));
 
   const themeToggle = document.getElementById('themeToggle');
   const savedTheme = localStorage.getItem('jcf_theme');
@@ -862,185 +827,112 @@
     overallBoard.textContent = 'Overall — You: ' + overallScore.me + ' · Opponent: ' + overallScore.them;
   }
 
-  const PEER_OPTIONS = {
-    debug: 1,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:openrelay.metered.ca:80' },
-        {
-          urls: 'turn:openrelay.metered.ca:80',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turns:openrelay.metered.ca:443?transport=tcp',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        }
-      ],
-      sdpSemantics: 'unified-plan'
+  const myId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+  const ROOM_TOPIC = 'jcodesfun/room/v2';
+  let mqttClient = null;
+  let opponentId = null;
+  let pairLocked = false;
+  let presenceTimer = null;
+
+  // conn is a small shim so all the existing game code (which calls
+  // conn.send(...) and checks conn.open) keeps working unchanged —
+  // only how messages actually travel has changed.
+  const conn = {
+    open: false,
+    send(data){
+      if(!mqttClient || !mqttClient.connected) return;
+      mqttClient.publish(ROOM_TOPIC, JSON.stringify({ id: myId, type: 'game', payload: data }));
     }
   };
 
-  let connectionTimer = null;
-
-  function normalizeRoomCode(value){
-    let code = String(value || '').trim();
-    if(!code) return '';
-    try {
-      if(code.indexOf('://') !== -1) {
-        const u = new URL(code);
-        code = u.searchParams.get('join') || code;
-      }
-    } catch(e) {}
-    return code.trim();
-  }
-
-  function clearConnectionTimer(){
-    if(connectionTimer){
-      clearTimeout(connectionTimer);
-      connectionTimer = null;
-    }
-  }
-
   function failConnection(message){
-    clearConnectionTimer();
+    connectOverlay.classList.remove('hidden');
     setLobbyStatus(message);
-    createBtn.disabled = false;
-    joinBtn.disabled = false;
+    setTimeout(startAutoConnect, 2000);
   }
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const autoJoin = urlParams.get('join');
-  if(autoJoin){ joinInput.value = autoJoin; }
+  // Wait for the mqtt library script to finish loading (with a timeout)
+  // instead of assuming it's ready. This is what was crashing before —
+  // "mqtt is not defined" simply meant startAutoConnect ran before the
+  // <script> tag in <head> had finished loading.
+  function waitForMqttLib(callback, attemptsLeft){
+    if(typeof mqtt !== 'undefined'){
+      callback();
+      return;
+    }
+    if(attemptsLeft <= 0){
+      setLobbyStatus('Could not load the connection library. Check your internet connection, disable any ad blocker for this page, then refresh.');
+      return;
+    }
+    setTimeout(() => waitForMqttLib(callback, attemptsLeft - 1), 300);
+  }
 
-  createBtn.addEventListener('click', () => {
-    myName = nameInput.value.trim() || 'Player 1';
-    localStorage.setItem('jcf_name', myName);
-    isHost = true;
-    myColor = 'red'; oppColor = 'yellow';
-    createBtn.disabled = true;
-    setLobbyStatus('Setting up your game...');
-    const id = 'c4-' + makeId(6);
-    peer = new Peer(id, PEER_OPTIONS);
-
-    peer.on('open', (id) => {
-      const url = window.location.origin + window.location.pathname + '?join=' + id;
-      roomCode.value = id;
-      shareArea.style.display = 'block';
-      setLobbyStatus('Waiting for them to join...');
-      copyBtn.onclick = () => {
-        navigator.clipboard.writeText(url).then(()=>{
-          copyBtn.textContent = 'Copied!';
-          setTimeout(()=>copyBtn.textContent='Copy Link', 1500);
-        });
-      };
-    });
-
-    peer.on('connection', (c) => {
-      if(conn && conn.open) {
-        c.close();
-        return;
-      }
-      conn = c;
-      setupConnection();
-    });
-
-    peer.on('disconnected', () => {
-      setLobbyStatus('Connection server disconnected. Reconnecting...');
-      try { peer.reconnect(); } catch(e) {}
-    });
-
-    peer.on('error', (err) => {
-      failConnection('Connection error: ' + (err.type || 'unknown') + '. Try creating a new game.');
-    });
-  });
-
-  joinBtn.addEventListener('click', () => {
-    const code = normalizeRoomCode(joinInput.value);
-    if(!code){ setLobbyStatus('Please enter a game code or invitation link.'); return; }
-    myName = nameInput.value.trim() || 'Player 2';
-    localStorage.setItem('jcf_name', myName);
-    isHost = false;
-    myColor = 'yellow'; oppColor = 'red';
-    joinBtn.disabled = true;
+  function startAutoConnect(){
     setLobbyStatus('Connecting...');
-
-    peer = new Peer(undefined, PEER_OPTIONS);
-    peer.on('open', () => {
-      conn = peer.connect(code, {
-        reliable: true,
-        serialization: 'json'
-      });
-
-      connectionTimer = setTimeout(() => {
-        if(!conn || !conn.open){
-          try { conn && conn.close(); } catch(e) {}
-          failConnection('Connection timed out. Both players should try again with a fresh game link.');
-        }
-      }, 25000);
-
-      conn.on('open', () => {
-        clearConnectionTimer();
-        setupConnection();
-        conn.send({ type: 'hello', name: myName });
-      });
-      conn.on('error', (err) => {
-        failConnection('Could not connect to that game (' + (err && err.type ? err.type : 'network error') + '). Check the link and try again.');
-      });
-    });
-    peer.on('disconnected', () => {
-      setLobbyStatus('Connection server disconnected. Reconnecting...');
-      try { peer.reconnect(); } catch(e) {}
-    });
-    peer.on('error', (err) => {
-      failConnection('Connection error: ' + (err.type || 'unknown') + '. Check the game link and try again.');
-    });
-  });
-
-  function setupConnection(){
-    clearConnectionTimer();
-
-    const onOpen = () => {
-      clearConnectionTimer();
-      if(isHost){
-        conn.send({ type: 'hello', name: myName });
-      }
-      startGame();
-    };
-
-    conn.on('open', onOpen);
-    conn.on('data', handleData);
-    conn.on('close', () => {
-      clearConnectionTimer();
-      addSystemMsg(theirName + ' disconnected.');
-      if(gameEl.style.display !== 'block'){
-        failConnection('The other player disconnected before the game started.');
-      }
-    });
-    conn.on('error', (err) => {
-      if(gameEl.style.display !== 'block'){
-        failConnection('Peer connection error. Please create a new link and try again.');
-      }
-    });
-
-    if(conn.open) onOpen();
+    waitForMqttLib(reallyStartAutoConnect, 30); // retries for ~9 seconds
   }
+
+  function reallyStartAutoConnect(){
+    if(mqttClient){ try { mqttClient.end(true); } catch(e){} }
+    opponentId = null; pairLocked = false; conn.open = false;
+    clearInterval(presenceTimer);
+
+    mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+      clientId: 'jcf_' + myId,
+      reconnectPeriod: 2000,
+      connectTimeout: 15000,
+      will: { topic: ROOM_TOPIC, payload: JSON.stringify({ id: myId, type: 'bye' }), qos: 0, retain: false }
+    });
+
+    mqttClient.on('connect', () => {
+      mqttClient.subscribe(ROOM_TOPIC);
+      setLobbyStatus('Waiting for opponent to open the page...');
+      const announce = () => {
+        if(!pairLocked) mqttClient.publish(ROOM_TOPIC, JSON.stringify({ id: myId, type: 'presence', name: myName }));
+      };
+      announce();
+      presenceTimer = setInterval(announce, 1500);
+    });
+
+    mqttClient.on('message', (topic, messageBuf) => {
+      let data;
+      try { data = JSON.parse(messageBuf.toString()); } catch(e){ return; }
+      if(!data || data.id === myId) return;
+
+      if(data.type === 'presence'){
+        if(pairLocked) return;
+        opponentId = data.id;
+        pairLocked = true;
+        clearInterval(presenceTimer);
+        isHost = myId < opponentId;
+        myColor = isHost ? 'red' : 'yellow';
+        oppColor = isHost ? 'yellow' : 'red';
+        theirName = data.name || theirName;
+        conn.open = true;
+        startGame();
+        conn.send({ type: 'hello', name: myName });
+      } else if(data.type === 'bye'){
+        if(pairLocked && data.id === opponentId){
+          addSystemMsg(theirName + ' disconnected.');
+          if(connectOverlay.classList.contains('hidden')){
+            // A game was already underway — let them keep playing solo / wait for a rematch,
+            // no need to re-show the overlay.
+          } else {
+            failConnection('The other player disconnected before the game started.');
+          }
+        }
+      } else if(data.type === 'game' && pairLocked && data.id === opponentId){
+        handleData(data.payload);
+      }
+    });
+
+    mqttClient.on('error', () => { setLobbyStatus('Connection hiccup, reconnecting...'); });
+  }
+
+  startAutoConnect();
 
   function startGame(){
-    lobby.style.display = 'none';
-    gameEl.style.display = 'block';
+    connectOverlay.classList.add('hidden');
     c4Init(); c4Render(); c4UpdateBanner();
     tttInit(); tttRender();
     ludoState = ludoFresh(); ludoRender();
