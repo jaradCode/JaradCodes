@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>J.Codes.Fun</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
   :root{
     --bg1:#1e1b4b;
@@ -788,8 +788,6 @@
   let myColor = null;
   let oppColor = null;
   let isHost = false;
-  let peer = null;
-  let conn = null;
   let myName = 'You';
   let theirName = 'Opponent';
   let currentGame = 'c4';
@@ -823,159 +821,85 @@
     overallBoard.textContent = 'Overall — You: ' + overallScore.me + ' · Opponent: ' + overallScore.them;
   }
 
-  // Several STUN servers for redundancy + multiple independent TURN
-  // relays (UDP, TCP and TLS variants). Mobile-data <-> wifi connections
-  // between distant cities almost always sit behind symmetric NAT/carrier
-  // firewalls, so a real TURN relay (not just STUN) is required for the
-  // connection to succeed at all — this is what was missing before.
-  const PEER_OPTIONS = {
-    debug: 1,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        { urls: 'stun:openrelay.metered.ca:80' },
-        {
-          urls: 'turn:openrelay.metered.ca:80',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turns:openrelay.metered.ca:443?transport=tcp',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        }
-      ],
-      iceCandidatePoolSize: 10,
-      sdpSemantics: 'unified-plan'
+  const myId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+  const ROOM_TOPIC = 'jcodesfun/room/v2';
+  let mqttClient = null;
+  let opponentId = null;
+  let pairLocked = false;
+  let presenceTimer = null;
+
+  // conn is a small shim so all the existing game code (which calls
+  // conn.send(...) and checks conn.open) keeps working unchanged —
+  // only how messages actually travel has changed.
+  const conn = {
+    open: false,
+    send(data){
+      if(!mqttClient || !mqttClient.connected) return;
+      mqttClient.publish(ROOM_TOPIC, JSON.stringify({ id: myId, type: 'game', payload: data }));
     }
   };
 
-  let connectionTimer = null;
-
-  function clearConnectionTimer(){
-    if(connectionTimer){
-      clearTimeout(connectionTimer);
-      connectionTimer = null;
-    }
-  }
-
-  const ROOM_ID = 'jcodesfun-room-v1';
-
   function failConnection(message){
-    clearConnectionTimer();
     setLobbyStatus(message);
     setTimeout(startAutoConnect, 2000);
   }
 
   function startAutoConnect(){
     setLobbyStatus('Connecting...');
-    isHost = true;
-    myColor = 'red'; oppColor = 'yellow';
-    peer = new Peer(ROOM_ID, PEER_OPTIONS);
+    if(mqttClient){ try { mqttClient.end(true); } catch(e){} }
+    opponentId = null; pairLocked = false; conn.open = false;
+    clearInterval(presenceTimer);
 
-    peer.on('open', () => {
+    mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+      clientId: 'jcf_' + myId,
+      reconnectPeriod: 2000,
+      connectTimeout: 15000,
+      will: { topic: ROOM_TOPIC, payload: JSON.stringify({ id: myId, type: 'bye' }), qos: 0, retain: false }
+    });
+
+    mqttClient.on('connect', () => {
+      mqttClient.subscribe(ROOM_TOPIC);
       setLobbyStatus('Waiting for opponent to open the page...');
+      const announce = () => {
+        if(!pairLocked) mqttClient.publish(ROOM_TOPIC, JSON.stringify({ id: myId, type: 'presence', name: myName }));
+      };
+      announce();
+      presenceTimer = setInterval(announce, 1500);
     });
 
-    peer.on('connection', (c) => {
-      if(conn && conn.open) { c.close(); return; }
-      conn = c;
-      setupConnection();
-    });
+    mqttClient.on('message', (topic, messageBuf) => {
+      let data;
+      try { data = JSON.parse(messageBuf.toString()); } catch(e){ return; }
+      if(!data || data.id === myId) return;
 
-    peer.on('disconnected', () => {
-      try { peer.reconnect(); } catch(e) {}
-    });
-
-    peer.on('error', (err) => {
-      if(err && err.type === 'unavailable-id'){
-        // Someone already opened the room — join them instead.
-        joinAsGuest();
-      } else {
-        failConnection('Connection hiccup, retrying...');
+      if(data.type === 'presence'){
+        if(pairLocked) return;
+        opponentId = data.id;
+        pairLocked = true;
+        clearInterval(presenceTimer);
+        isHost = myId < opponentId;
+        myColor = isHost ? 'red' : 'yellow';
+        oppColor = isHost ? 'yellow' : 'red';
+        theirName = data.name || theirName;
+        conn.open = true;
+        startGame();
+        conn.send({ type: 'hello', name: myName });
+      } else if(data.type === 'bye'){
+        if(pairLocked && data.id === opponentId){
+          addSystemMsg(theirName + ' disconnected.');
+          if(gameEl.style.display !== 'block'){
+            failConnection('The other player disconnected before the game started.');
+          }
+        }
+      } else if(data.type === 'game' && pairLocked && data.id === opponentId){
+        handleData(data.payload);
       }
     });
-  }
 
-  function joinAsGuest(){
-    isHost = false;
-    myColor = 'yellow'; oppColor = 'red';
-    peer = new Peer(undefined, PEER_OPTIONS);
-    peer.on('open', () => {
-      conn = peer.connect(ROOM_ID, { reliable: true, serialization: 'json' });
-
-      connectionTimer = setTimeout(() => {
-        if(!conn || !conn.open){
-          try { conn && conn.close(); } catch(e) {}
-          try { peer && peer.destroy(); } catch(e) {}
-          failConnection('Still trying to connect...');
-        }
-      }, 45000);
-
-      conn.on('open', () => {
-        clearConnectionTimer();
-        setupConnection();
-        conn.send({ type: 'hello', name: myName });
-      });
-      conn.on('error', () => {
-        clearConnectionTimer();
-        try { peer && peer.destroy(); } catch(e) {}
-        failConnection('Connection hiccup, retrying...');
-      });
-    });
-    peer.on('disconnected', () => {
-      try { peer.reconnect(); } catch(e) {}
-    });
-    peer.on('error', () => {
-      clearConnectionTimer();
-      failConnection('Connection hiccup, retrying...');
-    });
+    mqttClient.on('error', () => { setLobbyStatus('Connection hiccup, reconnecting...'); });
   }
 
   startAutoConnect();
-
-  function setupConnection(){
-    clearConnectionTimer();
-
-    const onOpen = () => {
-      clearConnectionTimer();
-      if(isHost){
-        conn.send({ type: 'hello', name: myName });
-      }
-      startGame();
-    };
-
-    conn.on('open', onOpen);
-    conn.on('data', handleData);
-    conn.on('close', () => {
-      clearConnectionTimer();
-      addSystemMsg(theirName + ' disconnected.');
-      if(gameEl.style.display !== 'block'){
-        failConnection('The other player disconnected before the game started.');
-      }
-    });
-    conn.on('error', (err) => {
-      if(gameEl.style.display !== 'block'){
-        failConnection('Peer connection error. Please create a new link and try again.');
-      }
-    });
-
-    if(conn.open) onOpen();
-  }
 
   function startGame(){
     lobby.style.display = 'none';
