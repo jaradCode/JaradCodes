@@ -2,2481 +2,719 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>J.Codes.Fun</title>
-<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js';"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>jaradCodes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
   :root{
-    --bg1:#1e1b4b;
-    --bg2:#0f172a;
-    --panel:#161327cc;
-    --panel-border:#3730a3;
-    --accent:#818cf8;
-    --accent2:#f472b6;
-    --red:#ef4444;
-    --red-dark:#991b1b;
-    --yellow:#fbbf24;
-    --yellow-dark:#92400e;
-    --text:#e2e8f0;
-    --muted:#94a3b8;
-  }
-  [data-theme="light"]{
-    --bg1:#e0e7ff;
-    --bg2:#f8fafc;
-    --panel:#ffffffd9;
-    --panel-border:#c7d2fe;
-    --text:#1e293b;
-    --muted:#64748b;
-  }
-  [data-theme="light"] .cell,[data-theme="light"] .ttt-cell,[data-theme="light"] .ludo-cell,
-  [data-theme="light"] #c4Board,[data-theme="light"] #tttBoard,[data-theme="light"] .ludo-ring,
-  [data-theme="light"] .tap-area,[data-theme="light"] .ludo-token-btn,[data-theme="light"] .msg.them,
-  [data-theme="light"] input[type=text],[data-theme="light"] .memory-card{
-    background:#eef1fb;
-  }
-  .theme-toggle{
-    position:fixed;
-    top:16px; right:16px;
-    width:40px; height:40px;
-    border-radius:50%;
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    font-size:1.1rem;
-    z-index:50;
+    --bg1:#241238; --bg2:#3a1750; --bg3:#5c1f4e;
+    --gold:#ffd166; --rose:#ff8fa3;
+    --glass:rgba(255,255,255,0.07); --glass-brd:rgba(255,255,255,0.14);
+    --ink:#f6eef7; --ink-dim:#cbb8d6;
+    --red:#ef4a5f; --red-dk:#a92f3f;
+    --yellow:#ffcb3d; --yellow-dk:#c99a12;
+    --green:#3fbf7f; --blue:#4f8ef7;
+    font-family:'Inter',system-ui,sans-serif;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box;}
-  html,body{height:100%;}
+  html,body{height:100%;margin:0;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
   body{
-    margin:0;
-    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
-    background:radial-gradient(1200px 800px at 20% -10%, #312e81 0%, transparent 60%),
-               radial-gradient(1000px 700px at 100% 110%, #7c2d92 0%, transparent 55%),
-               linear-gradient(160deg, var(--bg1), var(--bg2));
-    color:var(--text);
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding:20px;
+    background:
+      radial-gradient(ellipse at 15% 10%, rgba(255,209,102,0.10), transparent 45%),
+      radial-gradient(ellipse at 85% 90%, rgba(255,143,163,0.12), transparent 45%),
+      linear-gradient(160deg, var(--bg1), var(--bg2) 55%, var(--bg3));
+    color:var(--ink);
+    min-height:100%;
+    overflow-x:hidden;
+    position:relative;
   }
-  h1{
-    font-size:1.8rem;
-    margin:6px 0 4px;
-    background:linear-gradient(90deg, var(--accent), var(--accent2));
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
-    letter-spacing:0.5px;
-  }
-  .subtitle{color:var(--muted); font-size:0.9rem; margin-bottom:18px; text-align:center;}
+  .stars{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
+  .stars span{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.55);
+    animation:twinkle 4s ease-in-out infinite;}
+  @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.9}}
+  h1,h2,h3,.brand{font-family:'Fredoka',system-ui,sans-serif;}
 
-  /* ---------- Connect overlay (shown over the games until a second player joins) ---------- */
-  #connectOverlay{
-    position:fixed;
-    inset:0;
-    background:rgba(10,8,30,0.82);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:100;
+  .app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;}
+
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 22px;gap:12px;flex-wrap:wrap;
+  }
+  .brand{font-size:1.5rem;font-weight:700;letter-spacing:.3px;color:var(--gold);
+    text-shadow:0 2px 18px rgba(255,209,102,.35);}
+  .brand small{display:block;font-family:'Inter';font-size:.68rem;font-weight:500;color:var(--ink-dim);letter-spacing:.4px;}
+  .status-pill{
+    font-size:.8rem;padding:6px 14px;border-radius:999px;background:var(--glass);
+    border:1px solid var(--glass-brd);color:var(--ink-dim);
+  }
+  .status-pill.live{color:#9df7c4;border-color:rgba(157,247,196,.35);}
+
+  /* ---------- SETUP OVERLAY ---------- */
+  #setup{
+    position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(160deg, rgba(36,18,56,.97), rgba(58,23,80,.97));
     padding:20px;
   }
-  #connectOverlay.hidden{display:none;}
-  .connect-box{
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    border-radius:16px;
-    padding:28px;
-    max-width:380px;
-    width:100%;
-    text-align:center;
-    backdrop-filter:blur(6px);
-    box-shadow:0 10px 40px rgba(0,0,0,0.4);
+  .card{
+    width:100%;max-width:420px;background:var(--glass);border:1px solid var(--glass-brd);
+    border-radius:22px;padding:26px 24px;backdrop-filter:blur(14px);
+    box-shadow:0 20px 60px rgba(0,0,0,.35);
   }
-  .connect-spinner{
-    width:34px; height:34px;
-    border-radius:50%;
-    border:3px solid #3730a3;
-    border-top-color:var(--accent);
-    margin:0 auto 14px;
-    animation:spin 0.9s linear infinite;
-  }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
-  .status-line{
-    font-size:0.9rem;
-    color:var(--text);
-    text-align:center;
-  }
+  .card h2{margin:0 0 4px;font-size:1.5rem;}
+  .card p.sub{margin:0 0 20px;color:var(--ink-dim);font-size:.9rem;line-height:1.5;}
+  .tabs{display:flex;gap:8px;margin-bottom:18px;background:rgba(0,0,0,.18);padding:4px;border-radius:12px;}
+  .tabs button{flex:1;padding:9px;border:none;border-radius:9px;background:transparent;color:var(--ink-dim);
+    font-weight:600;cursor:pointer;font-size:.85rem;transition:.15s;}
+  .tabs button.active{background:var(--gold);color:#3a2400;}
+  label{display:block;font-size:.78rem;color:var(--ink-dim);margin:14px 0 6px;font-weight:600;}
   input[type=text]{
-    width:100%;
-    padding:10px 12px;
-    border-radius:8px;
-    border:1px solid #4338ca;
-    background:#0f0c29;
-    color:var(--text);
-    font-size:0.95rem;
-    outline:none;
+    width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--glass-brd);
+    background:rgba(0,0,0,.22);color:var(--ink);font-size:.95rem;outline:none;
   }
-  input[type=text]:focus{border-color:var(--accent);}
-  button{
-    cursor:pointer;
-    border:none;
-    border-radius:8px;
-    padding:10px 16px;
-    font-size:0.95rem;
-    font-weight:600;
-    transition:transform .1s ease, opacity .15s ease;
+  input[type=text]:focus{border-color:var(--gold);}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:12px 18px;border-radius:12px;border:none;font-weight:700;font-size:.92rem;
+    cursor:pointer;transition:transform .12s, box-shadow .12s;width:100%;margin-top:16px;
   }
-  button:active{transform:scale(0.96);}
-  button:disabled{opacity:0.5; cursor:not-allowed;}
-  .btn-primary{
-    background:linear-gradient(90deg, var(--accent), #6366f1);
-    color:white;
-    width:100%;
-    margin-top:10px;
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:linear-gradient(135deg,var(--gold),#ffb238);color:#3a2400;
+    box-shadow:0 8px 24px rgba(255,178,56,.3);}
+  .btn-ghost{background:transparent;border:1px solid var(--glass-brd);color:var(--ink);}
+  .id-box{
+    display:flex;gap:8px;align-items:center;margin-top:14px;background:rgba(0,0,0,.25);
+    border-radius:11px;padding:10px 12px;border:1px solid var(--glass-brd);
   }
-  .btn-secondary{
-    background:linear-gradient(90deg, var(--accent2), #db2777);
-    color:white;
-    width:100%;
-    margin-top:10px;
+  .id-box code{flex:1;font-size:.95rem;letter-spacing:.5px;color:var(--gold);word-break:break-all;}
+  .id-box button{background:none;border:none;color:var(--ink-dim);cursor:pointer;font-size:1rem;}
+  .spinner{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.25);
+    border-top-color:var(--gold);animation:spin 0.8s linear infinite;display:inline-block;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hint{font-size:.76rem;color:var(--ink-dim);margin-top:10px;line-height:1.5;}
+
+  /* ---------- GAME LAYOUT ---------- */
+  main.game{
+    flex:1;display:flex;gap:18px;padding:0 18px 18px;align-items:flex-start;
+    flex-wrap:wrap;justify-content:center;
   }
-  .help-text{
-    font-size:0.78rem;
-    color:var(--muted);
-    text-align:center;
-    margin-bottom:12px;
-    line-height:1.4;
+  .board-wrap{
+    background:var(--glass);border:1px solid var(--glass-brd);border-radius:24px;padding:16px;
+    backdrop-filter:blur(10px);box-shadow:0 20px 50px rgba(0,0,0,.3);
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    flex:0 0 auto;
+  }
+  .board{
+    width:min(78vmin,520px);height:min(78vmin,520px);
+    display:grid;grid-template-columns:repeat(15,1fr);grid-template-rows:repeat(15,1fr);
+    background:#fdf6ee;border-radius:14px;overflow:hidden;position:relative;
+    box-shadow:inset 0 0 0 3px rgba(0,0,0,.06);
+  }
+  .zone{border-radius:14px;position:relative;}
+  .zone.red{background:linear-gradient(135deg,var(--red),var(--red-dk));}
+  .zone.yellow{background:linear-gradient(135deg,var(--yellow),var(--yellow-dk));}
+  .zone.green{background:linear-gradient(135deg,#5fdc9c,#2e9662);opacity:.35;}
+  .zone.blue{background:linear-gradient(135deg,#7aa9ff,#3563c9);opacity:.35;}
+  .zone-inner{
+    position:absolute;inset:14%;background:rgba(255,255,255,.85);border-radius:12px;
+  }
+  .base-slot{
+    width:60%;height:60%;border-radius:50%;background:rgba(0,0,0,.08);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .cell{background:#fdf6ee;position:relative;}
+  .cell.path{background:#fffdf8;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05);}
+  .cell.path.safe::after{content:"★";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:.6vmin;color:#d9b23a;font-size:11px;opacity:.7;}
+  .cell.home-red{background:linear-gradient(135deg,var(--red),var(--red-dk));}
+  .cell.home-yellow{background:linear-gradient(135deg,var(--yellow),var(--yellow-dk));}
+  .cell.start-red{background:var(--red);}
+  .cell.start-yellow{background:var(--yellow);}
+  .cell.power{display:flex;align-items:center;justify-content:center;font-size:11px;background:#fff3d6;}
+  .center-diamond{
+    position:absolute;display:flex;align-items:center;justify-content:center;
+    background:conic-gradient(from 45deg, var(--red), var(--yellow), var(--red));
+    clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);font-size:20px;
+  }
+  .token{
+    position:absolute;width:70%;height:70%;top:15%;left:15%;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;
+    border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer;
+    transition:top .25s ease, left .25s ease, transform .15s;z-index:5;
+  }
+  .token.red-tok{background:var(--red);}
+  .token.yellow-tok{background:var(--yellow-dk);}
+  .token.movable{animation:bounce .7s infinite;outline:2px solid #fff;}
+  .token.shielded::after{content:"🛡";position:absolute;top:-8px;right:-6px;font-size:11px;}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+  .controls{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;}
+  .turn-flag{display:flex;align-items:center;gap:8px;font-weight:700;font-family:'Fredoka';font-size:1rem;}
+  .dot{width:12px;height:12px;border-radius:50%;}
+  .dot.red-tok{background:var(--red);} .dot.yellow-tok{background:var(--yellow);}
+  .dice-btn{
+    width:64px;height:64px;border-radius:16px;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#fff,#e9e2ff);font-size:28px;font-weight:800;
+    box-shadow:0 10px 24px rgba(0,0,0,.25);transition:transform .1s;
+  }
+  .dice-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .dice-btn:active:not(:disabled){transform:scale(.92);}
+  .log{
+    width:100%;max-height:90px;overflow-y:auto;font-size:.78rem;color:var(--ink-dim);
+    background:rgba(0,0,0,.2);border-radius:10px;padding:8px 10px;line-height:1.5;
   }
 
-  /* ---------- Game layout ---------- */
-  #game{
-    display:block;
-    width:100%;
-    max-width:1000px;
-  }
-  .game-tabs{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-bottom:14px;
-  }
-  .tab-btn{
-    flex:1 1 100px;
-    background:#25204a;
-    color:var(--muted);
-    font-size:0.82rem;
-    padding:10px 6px;
-    border-radius:10px;
-    font-weight:700;
-  }
-  .tab-btn.active{
-    background:linear-gradient(90deg, var(--accent), #6366f1);
-    color:white;
-  }
-  .game-wrap{
-    display:flex;
-    gap:20px;
-    width:100%;
-    flex-wrap:wrap;
-    justify-content:center;
-    align-items:flex-start;
-  }
-  .game-main{
-    flex:1 1 420px;
-    max-width:480px;
-    display:flex;
-    flex-direction:column;
-  }
-  .board-panel{
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    border-radius:16px;
-    padding:18px;
-    box-shadow:0 10px 40px rgba(0,0,0,0.4);
-    display:none;
-  }
-  .board-panel.active{display:block;}
-  .turn-banner{
-    text-align:center;
-    font-weight:700;
-    font-size:1.05rem;
-    padding:10px;
-    border-radius:10px;
-    margin-bottom:14px;
-    transition:background .2s ease;
-  }
-  .turn-you{background:rgba(129,140,248,0.25); color:#c7d2fe;}
-  .turn-them{background:rgba(148,163,184,0.15); color:var(--muted);}
-  .turn-over{background:rgba(244,114,182,0.25); color:#fbcfe8;}
-  @keyframes pulseWin{0%{transform:scale(1);}50%{transform:scale(1.04);}100%{transform:scale(1);}}
-  .celebrate{animation:pulseWin 0.7s ease-in-out infinite;}
-
-  .score-line{text-align:center; color:var(--muted); font-size:0.85rem; margin-top:10px;}
-
-  /* Connect 4 */
-  #c4Board{
-    display:grid;
-    grid-template-columns:repeat(7, 1fr);
-    gap:8px;
-    background:#1e1b4b;
-    padding:10px;
-    border-radius:12px;
-    border:2px solid #4338ca;
-  }
-  .col{
-    display:flex;
-    flex-direction:column-reverse;
-    gap:8px;
-    cursor:pointer;
-    border-radius:8px;
-    padding:2px;
-    transition:background .15s ease;
-  }
-  .col:hover{background:rgba(129,140,248,0.15);}
-  .col.disabled{cursor:default;}
-  .col.disabled:hover{background:transparent;}
-  .cell{
-    width:100%;
-    aspect-ratio:1/1;
-    border-radius:50%;
-    background:#0f0c29;
-    box-shadow:inset 0 2px 6px rgba(0,0,0,0.6);
-    position:relative;
-    overflow:hidden;
-  }
-  .cell.red{background:radial-gradient(circle at 35% 30%, #fca5a5, var(--red) 60%, var(--red-dark));
-    animation:drop .35s ease;}
-  .cell.yellow{background:radial-gradient(circle at 35% 30%, #fde68a, var(--yellow) 60%, var(--yellow-dark));
-    animation:drop .35s ease;}
-  @keyframes drop{
-    from{transform:translateY(-140%); opacity:0;}
-    to{transform:translateY(0); opacity:1;}
-  }
-  .win-cell{box-shadow:0 0 0 3px #fff, inset 0 2px 6px rgba(0,0,0,0.6) !important;}
-
-  .players-row{
-    display:flex;
-    justify-content:space-between;
-    margin-top:14px;
-    font-size:0.88rem;
-  }
-  .player-chip{display:flex; align-items:center; gap:8px;}
-  .dot{width:14px; height:14px; border-radius:50%; display:inline-block;}
-  .dot.red{background:var(--red);}
-  .dot.yellow{background:var(--yellow);}
-
-  .controls-row{display:flex; gap:10px; margin-top:14px;}
-  .controls-row button{flex:1;}
-
-  /* Tic Tac Toe */
-  #tttBoard{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:8px;
-    background:#1e1b4b;
-    padding:10px;
-    border-radius:12px;
-    border:2px solid #4338ca;
-    max-width:280px;
-    margin:0 auto;
-  }
-  .ttt-cell{
-    aspect-ratio:1/1;
-    background:#0f0c29;
-    border-radius:8px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:2.2rem;
-    font-weight:800;
-    cursor:pointer;
-  }
-  .ttt-cell.x{color:var(--accent);}
-  .ttt-cell.o{color:var(--accent2);}
-  .ttt-cell.win{box-shadow:inset 0 0 0 3px #fff;}
-  .ttt-cell.disabled{cursor:default;}
-
-  /* Ludo */
-  .ludo-ring{
-    position:relative;
-    display:grid;
-    grid-template-columns:repeat(11,1fr);
-    grid-template-rows:repeat(11,26px);
-    gap:2px;
-    background:#1e1b4b;
-    padding:8px;
-    border-radius:12px;
-    border:2px solid #4338ca;
-    max-width:420px;
-    margin:0 auto;
-  }
-  .ludo-cell{
-    background:#0f0c29;
-    border-radius:4px;
-    position:relative;
-  }
-  .ludo-cell.safe{box-shadow:inset 0 0 0 2px #fbbf24;}
-  .ludo-cell.start-red{background:#7f1d1d;}
-  .ludo-cell.start-yellow{background:#78350f;}
-  .ludo-center{
-    grid-column:2 / 11;
-    grid-row:2 / 11;
-    background:radial-gradient(circle, #312e81 0%, #1e1b4b 70%);
-    border-radius:8px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-  }
-  .ludo-center-dice{font-size:2.4rem;}
-  .ludo-center-turn{font-size:0.8rem; color:var(--muted); margin-top:6px; text-align:center;}
-  .ludo-token{
-    position:absolute;
-    width:14px;
-    height:14px;
-    border-radius:50%;
-    border:2px solid white;
-    box-shadow:0 2px 4px rgba(0,0,0,.5);
-    top:50%; left:50%;
-  }
-  .ludo-token.red{background:var(--red);}
-  .ludo-token.yellow{background:var(--yellow);}
-  #ludoRollBtn{margin-top:12px;}
-  .ludo-info-row{display:flex; gap:10px; margin-top:14px;}
-  .ludo-side{flex:1; background:#161327; border-radius:10px; padding:10px;}
-  .ludo-side h4{margin:0 0 8px; font-size:0.85rem;}
-  .ludo-tokens{display:flex; gap:6px; flex-wrap:wrap;}
-  .ludo-token-btn{
-    width:36px; height:36px; border-radius:50%;
-    border:2px solid #444; background:#0f0c29; color:#fff;
-    font-size:0.62rem; display:flex; align-items:center; justify-content:center;
-    cursor:default; text-align:center; line-height:1;
-  }
-  .ludo-token-btn.movable{cursor:pointer; box-shadow:0 0 0 3px #fbbf24;}
-  .ludo-token-btn.red-tok{border-color:var(--red);}
-  .ludo-token-btn.yellow-tok{border-color:var(--yellow);}
-  .ludo-token-btn.home{background:#166534;}
-
-  /* Speed Tap */
-  .tap-area{
-    height:190px;
-    border-radius:14px;
-    background:#0f0c29;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:1.15rem;
-    font-weight:700;
-    text-align:center;
-    padding:16px;
-    cursor:pointer;
-    user-select:none;
-    transition:background .15s;
-  }
-  .tap-area.countdown{background:#7f1d1d;}
-  .tap-area.live{background:#166534; font-size:2rem;}
-  .tap-area.falsestart{background:#7f1d1d;}
-  .tap-area.result{background:#312e81;}
-
-  /* Overall scoreboard */
-  .overall-board{
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    border-radius:14px;
-    padding:10px 16px;
-    max-width:1000px;
-    width:100%;
-    display:flex;
-    justify-content:center;
-    gap:18px;
-    font-size:0.85rem;
-    margin-bottom:14px;
-    text-align:center;
-  }
-
-  /* Rock Paper Scissors */
-  .rps-choices{display:flex; gap:10px; justify-content:center; margin-top:10px;}
-  .rps-btn{flex:1; max-width:100px; font-size:2rem; padding:14px; background:#25204a; color:var(--text);}
-  .rps-btn.selected{background:linear-gradient(90deg, var(--accent), #6366f1); color:white;}
-  .rps-result{text-align:center; font-size:1rem; margin-top:12px; min-height:24px;}
-
-  /* Guess the Number */
-  .guess-input-row{display:flex; gap:8px; margin-top:10px;}
-  .guess-input-row input{flex:1;}
-  .guess-feedback{text-align:center; font-size:0.95rem; margin-top:10px; min-height:24px;}
-  .guess-history{font-size:0.78rem; color:var(--muted); text-align:center; margin-top:8px; min-height:18px;}
-
-  /* Would You Rather */
-  .wyr-prompt{text-align:center; font-size:1rem; font-weight:600; margin:14px 0; min-height:50px;}
-  .wyr-options{display:flex; gap:10px;}
-  .wyr-btn{flex:1; background:#25204a; color:var(--text); padding:16px 10px; font-size:0.85rem;}
-  .wyr-btn.picked{background:linear-gradient(90deg, var(--accent2), #db2777); color:white;}
-  .wyr-result{text-align:center; font-size:0.85rem; color:var(--muted); margin-top:10px; min-height:20px;}
-
-  /* Memory Match */
-  .memory-grid{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:8px;
-    max-width:340px;
-    margin:0 auto;
-  }
-  .memory-card{
-    aspect-ratio:1/1;
-    background:#0f0c29;
-    border-radius:8px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:1.6rem;
-    cursor:pointer;
-  }
-  .memory-card.flipped{background:linear-gradient(135deg, var(--accent), #6366f1);}
-  .memory-card.matched{background:#166534; cursor:default;}
-
-  /* Draw It */
-  .draw-toolbar{display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap;}
-  .draw-toolbar button{flex:0 0 auto; width:auto;}
-  .draw-secret-word{font-weight:700; color:var(--accent2); letter-spacing:2px; background:#0f0c29; padding:6px 12px; border-radius:6px; font-size:0.9rem;}
-  .draw-guess-hint{text-align:center; font-size:1.3rem; letter-spacing:6px; font-weight:700; color:var(--muted); margin-bottom:10px; min-height:28px;}
-  #drawCanvas{width:100%; height:auto; aspect-ratio:4/3; background:#fdfdfd; border-radius:10px; border:2px solid #4338ca; touch-action:none; display:block;}
-
-  /* Truth Meter */
-  .truth-toggle{display:flex; gap:10px; margin-top:10px;}
-  .truth-toggle button{flex:1;}
-  .truth-toggle button.selected{background:linear-gradient(90deg, var(--accent), #6366f1); color:white;}
-  .truth-statement{background:#0f0c29; border-radius:10px; padding:14px; text-align:center; font-size:1.05rem; font-weight:600; margin:14px 0; min-height:50px; display:flex; align-items:center; justify-content:center;}
-  .truth-result{text-align:center; font-size:0.9rem; color:var(--muted); margin-top:10px; min-height:20px;}
-
-  /* Number Duel (Nim) */
-  .nim-pile{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; background:#0f0c29; border-radius:10px; padding:14px; min-height:60px; align-items:center;}
-  .nim-token{width:18px; height:18px; border-radius:4px; background:linear-gradient(135deg, var(--accent), #6366f1);}
-  .nim-controls{display:flex; gap:10px; margin-top:14px;}
-  .nim-controls button{flex:1;}
-
-  /* Countdown Math */
-  .math-target{text-align:center; font-size:2.4rem; font-weight:800; color:var(--accent2); margin:10px 0;}
-  .math-input-row{display:flex; gap:8px; margin-top:10px;}
-  .math-input-row input{flex:1;}
-  .math-feedback{text-align:center; font-size:0.9rem; color:var(--muted); margin-top:10px; min-height:20px;}
-
-  /* Color Match */
-  .color-trial{text-align:center; font-size:2.6rem; font-weight:800; padding:30px 10px; background:#0f0c29; border-radius:12px; margin:10px 0; min-height:60px; display:flex; align-items:center; justify-content:center;}
-  .color-buttons{display:flex; gap:10px;}
-  .color-buttons button{flex:1;}
-
-  /* Typing indicator */
-  .typing-indicator{font-size:0.75rem; color:var(--muted); font-style:italic; min-height:16px; margin-bottom:4px;}
-
-  /* ---------- Chat ---------- */
+  /* ---------- CHAT ---------- */
   .chat-panel{
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    border-radius:16px;
-    padding:16px;
-    flex:1 1 280px;
-    max-width:340px;
-    display:flex;
-    flex-direction:column;
-    height:560px;
-    box-shadow:0 10px 40px rgba(0,0,0,0.4);
+    width:320px;max-width:100%;flex:0 0 320px;background:var(--glass);border:1px solid var(--glass-brd);
+    border-radius:22px;backdrop-filter:blur(12px);display:flex;flex-direction:column;
+    height:min(640px,80vh);box-shadow:0 20px 50px rgba(0,0,0,.3);overflow:hidden;
+    transition:opacity .2s, transform .2s;
   }
-  .chat-header{font-weight:700; color:var(--accent); margin-bottom:10px; font-size:0.95rem;}
-  #messages{
-    flex:1;
-    overflow-y:auto;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    padding-right:4px;
-    margin-bottom:10px;
-  }
-  #messages::-webkit-scrollbar{width:6px;}
-  #messages::-webkit-scrollbar-thumb{background:#4338ca; border-radius:4px;}
-  .msg{
-    max-width:82%;
-    padding:8px 11px;
-    border-radius:12px;
-    font-size:0.87rem;
-    line-height:1.35;
-    word-wrap:break-word;
-  }
-  .msg.me{
-    align-self:flex-end;
-    background:linear-gradient(135deg, var(--accent), #6366f1);
-    color:white;
-    border-bottom-right-radius:3px;
-  }
-  .msg.them{
-    align-self:flex-start;
-    background:#25204a;
-    color:var(--text);
-    border-bottom-left-radius:3px;
-  }
-  .msg.system{
-    align-self:center;
-    background:transparent;
-    color:var(--muted);
-    font-style:italic;
-    font-size:0.78rem;
-  }
-  .chat-input-row{display:flex; gap:8px;}
-  .chat-input-row input{flex:1;}
-  .chat-input-row button{background:linear-gradient(90deg, var(--accent2), #db2777); color:white; padding:10px 14px;}
+  .chat-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+    border-bottom:1px solid var(--glass-brd);}
+  .chat-head strong{font-family:'Fredoka';font-size:1rem;}
+  .min-btn{background:rgba(255,255,255,.08);border:1px solid var(--glass-brd);color:var(--ink);
+    width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+  .chat-msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+  .msg{max-width:80%;padding:9px 13px;border-radius:14px;font-size:.88rem;line-height:1.4;word-break:break-word;}
+  .msg-name{font-size:.68rem;font-weight:700;opacity:.65;margin-bottom:2px;}
+  .msg.me{align-self:flex-end;background:linear-gradient(135deg,var(--gold),#ffb238);color:#3a2400;border-bottom-right-radius:4px;}
+  .msg.them{align-self:flex-start;background:rgba(255,255,255,.1);border-bottom-left-radius:4px;}
+  .msg.sys{align-self:center;color:var(--ink-dim);font-size:.75rem;background:none;}
+  .chat-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--glass-brd);}
+  .chat-input input{flex:1;border-radius:12px;border:1px solid var(--glass-brd);background:rgba(0,0,0,.22);
+    color:var(--ink);padding:10px 12px;outline:none;font-size:.9rem;}
+  .chat-input button{background:var(--gold);border:none;border-radius:12px;padding:0 16px;font-weight:700;
+    color:#3a2400;cursor:pointer;}
 
-  footer{margin-top:24px; color:var(--muted); font-size:0.78rem; text-align:center;}
-  a{color:var(--accent);}
+  .chat-bubble{
+    position:fixed;bottom:calc(22px + env(safe-area-inset-bottom,0px));right:22px;z-index:40;
+    width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#ffb238);
+    display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;
+    box-shadow:0 12px 30px rgba(0,0,0,.35);border:none;
+  }
+  .chat-bubble .badge{
+    position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:11px;font-weight:800;
+    min-width:19px;height:19px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+    border:2px solid var(--bg2);
+  }
+  .hidden{display:none !important;}
 
-  @media (max-width:640px){
-    .chat-panel{height:400px; max-width:100%;}
-    .board-panel{max-width:100%;}
+  @media (max-width:860px){
+    main.game{flex-direction:column;align-items:center;}
+    .chat-panel{width:100%;flex-basis:auto;height:52vh;}
   }
 </style>
 </head>
 <body>
+<div class="stars" id="stars"></div>
 
-<h1>J.Codes.Fun</h1>
-<button id="themeToggle" class="theme-toggle" title="Toggle light/dark">🌙</button>
-<div class="subtitle" id="pageSubtitle">Pick a game, connect with a friend, and have some fun. 🎮</div>
-
-<div id="connectOverlay">
-  <div class="connect-box">
-    <div class="connect-spinner"></div>
-    <div class="status-line" id="lobbyStatus">Connecting...</div>
-  </div>
-</div>
-
-<div id="game">
-  <div class="overall-board" id="overallBoard">Overall — You: 0 · Opponent: 0</div>
-  <div class="game-tabs">
-    <button class="tab-btn active" data-game="c4">🔴🟡 Connect 4</button>
-    <button class="tab-btn" data-game="ludo">🎲 Ludo</button>
-    <button class="tab-btn" data-game="ttt">❌⭕ Tic-Tac-Toe</button>
-    <button class="tab-btn" data-game="tap">⚡ Speed Tap</button>
-    <button class="tab-btn" data-game="rps">✊✋✌️ RPS</button>
-    <button class="tab-btn" data-game="guess">🔢 Guess Number</button>
-    <button class="tab-btn" data-game="wyr">🤔 Would You Rather</button>
-    <button class="tab-btn" data-game="memory">🧠 Memory Match</button>
-    <button class="tab-btn" data-game="draw">🎨 Draw It</button>
-    <button class="tab-btn" data-game="truth">🤥 Truth Meter</button>
-    <button class="tab-btn" data-game="nim">🪵 Number Duel</button>
-    <button class="tab-btn" data-game="math">🧮 Countdown Math</button>
-    <button class="tab-btn" data-game="colormatch">🌈 Color Match</button>
-  </div>
-
-  <div class="game-wrap">
-    <div class="game-main">
-
-      <!-- Connect 4 -->
-      <div id="panel-c4" class="board-panel active">
-        <div class="turn-banner" id="c4TurnBanner">Connecting...</div>
-        <div class="help-text">Click a column to drop your piece. First to connect 4 in a row (any direction — up, across, or diagonal) wins the round.</div>
-        <div id="c4Board"></div>
-        <div class="players-row">
-          <div class="player-chip"><span class="dot red"></span><span id="c4P1">Player 1</span></div>
-          <div class="player-chip"><span id="c4P2">Player 2</span><span class="dot yellow"></span></div>
-        </div>
-        <div class="score-line" id="c4ScoreLine">Wins — You: 0 · Opponent: 0</div>
-        <div class="controls-row">
-          <button class="btn-secondary" id="c4RematchBtn">🔄 Rematch</button>
-          <button class="btn-secondary" id="c4ResetBtn">♻️ Reset Score</button>
-        </div>
-      </div>
-
-      <!-- Ludo -->
-      <div id="panel-ludo" class="board-panel">
-        <div class="turn-banner" id="ludoTurnBanner">Connecting...</div>
-        <div class="help-text">Roll a 6 to bring a token out of your yard. Move it around the ring — land on their token to send it back to their yard. Get all 4 tokens fully Home first to win the race.</div>
-        <div class="ludo-ring" id="ludoRing"></div>
-        <button class="btn-primary" id="ludoRollBtn">Roll Dice</button>
-        <div class="ludo-info-row">
-          <div class="ludo-side"><h4>🔴 Red</h4><div class="ludo-tokens" id="ludoRedTokens"></div></div>
-          <div class="ludo-side"><h4>🟡 Yellow</h4><div class="ludo-tokens" id="ludoYellowTokens"></div></div>
-        </div>
-        <div class="controls-row">
-          <button class="btn-secondary" id="ludoRematchBtn">🔄 New Race</button>
-        </div>
-      </div>
-
-      <!-- Tic Tac Toe -->
-      <div id="panel-ttt" class="board-panel">
-        <div class="turn-banner" id="tttTurnBanner">Connecting...</div>
-        <div class="help-text">Take turns placing your symbol. Get 3 in a row to win a round — first to 3 round wins takes the whole match.</div>
-        <div id="tttBoard"></div>
-        <div class="players-row">
-          <div class="player-chip">You are <span id="tttMySymbol">-</span></div>
-          <div class="player-chip">Opponent is <span id="tttOppSymbol">-</span></div>
-        </div>
-        <div class="score-line" id="tttScoreLine">First to 3 wins the match — 0 : 0</div>
-        <div class="controls-row">
-          <button class="btn-secondary" id="tttRematchBtn">🔄 New Round</button>
-          <button class="btn-secondary" id="tttResetBtn">♻️ Reset Match</button>
-        </div>
-      </div>
-
-      <!-- Speed Tap -->
-      <div id="panel-tap" class="board-panel">
-        <div class="turn-banner" id="tapBanner">First to 5 wins the duel ⚡</div>
-        <div class="help-text">Both hit "I'm Ready". Wait for the box to flash green, then tap it as fast as you can. Tap before it turns green and you lose the round automatically.</div>
-        <div class="tap-area" id="tapArea">Click "I'm Ready" to begin</div>
-        <div class="controls-row">
-          <button class="btn-primary" id="tapReadyBtn">I'm Ready</button>
-          <button class="btn-secondary" id="tapNextBtn" style="display:none;">Next Round</button>
-        </div>
-        <div class="score-line" id="tapScoreLine">Score — You: 0 · Opponent: 0</div>
-      </div>
-
-      <!-- Rock Paper Scissors -->
-      <div id="panel-rps" class="board-panel">
-        <div class="turn-banner" id="rpsBanner">First to 5 wins the duel</div>
-        <div class="help-text">Pick rock, paper, or scissors. Both choices are hidden until you've both picked, then the round resolves.</div>
-        <div class="rps-choices">
-          <button class="rps-btn" data-choice="rock">✊</button>
-          <button class="rps-btn" data-choice="paper">✋</button>
-          <button class="rps-btn" data-choice="scissors">✌️</button>
-        </div>
-        <div class="rps-result" id="rpsResult"></div>
-        <div class="score-line" id="rpsScoreLine">Score — You: 0 · Opponent: 0</div>
-      </div>
-
-      <!-- Guess the Number -->
-      <div id="panel-guess" class="board-panel">
-        <div class="turn-banner" id="guessBanner">Connecting...</div>
-        <div class="help-text">One of you secretly sets a number 1-100, the other guesses with hot/cold hints. Fewer guesses wins the round, then you swap roles.</div>
-        <div id="guessSetterArea">
-          <div class="guess-input-row">
-            <input type="text" id="guessSecretInput" placeholder="Pick a secret number 1-100">
-            <button class="btn-primary" id="guessSetBtn">Set</button>
-          </div>
-        </div>
-        <div id="guessGuesserArea" style="display:none;">
-          <div class="guess-input-row">
-            <input type="text" id="guessTryInput" placeholder="Your guess">
-            <button class="btn-primary" id="guessTryBtn">Guess</button>
-          </div>
-        </div>
-        <div class="guess-feedback" id="guessFeedback"></div>
-        <div class="guess-history" id="guessHistory"></div>
-        <div class="score-line" id="guessScoreLine">Rounds won — You: 0 · Opponent: 0</div>
-      </div>
-
-      <!-- Would You Rather -->
-      <div id="panel-wyr" class="board-panel">
-        <div class="turn-banner" id="wyrBanner">See if you two match!</div>
-        <div class="help-text">Both pick an answer without seeing the other's choice. Once you've both picked, see if you matched.</div>
-        <div class="wyr-prompt" id="wyrPrompt">Click Next Question to start</div>
-        <div class="wyr-options">
-          <button class="wyr-btn" id="wyrBtnA">A</button>
-          <button class="wyr-btn" id="wyrBtnB">B</button>
-        </div>
-        <div class="wyr-result" id="wyrResult"></div>
-        <div class="controls-row">
-          <button class="btn-secondary" id="wyrNextBtn">Next Question</button>
-        </div>
-        <div class="score-line" id="wyrScoreLine">Matched — 0 times</div>
-      </div>
-
-      <!-- Memory Match -->
-      <div id="panel-memory" class="board-panel">
-        <div class="turn-banner" id="memoryBanner">Connecting...</div>
-        <div class="help-text">Flip two cards. Find a matching pair and you go again. Miss, and it's the other person's turn. Most pairs when the board clears wins.</div>
-        <div class="memory-grid" id="memoryGrid"></div>
-        <div class="score-line" id="memoryScoreLine">Pairs — You: 0 · Opponent: 0</div>
-        <div class="controls-row">
-          <button class="btn-secondary" id="memoryRematchBtn">🔄 New Board</button>
-        </div>
-      </div>
-
-      <!-- Draw It -->
-      <div id="panel-draw" class="board-panel">
-        <div class="turn-banner" id="drawBanner">Connecting...</div>
-        <div class="help-text">One of you draws, the other guesses the word in the chat box. Guess it right and you become the drawer for the next round.</div>
-        <div class="draw-toolbar" id="drawToolbar" style="display:none;">
-          <button class="btn-primary" id="drawNewWordBtn">🎲 New Word</button>
-          <button class="btn-secondary" id="drawClearBtn">🧹 Clear</button>
-          <span class="draw-secret-word" id="drawSecretWord"></span>
-        </div>
-        <div class="draw-guess-hint" id="drawGuessHint"></div>
-        <canvas id="drawCanvas" width="400" height="300"></canvas>
-        <div class="score-line" id="drawScoreLine">Words guessed — You: 0 · Opponent: 0</div>
-      </div>
-
-      <!-- Truth Meter -->
-      <div id="panel-truth" class="board-panel">
-        <div class="turn-banner" id="truthBanner">Connecting...</div>
-        <div class="help-text">One of you writes a statement and marks it true or false — the other guesses which. Fool them and you score; guess right and they don't. Roles swap each round.</div>
-        <div id="truthSharerArea">
-          <input type="text" id="truthStatementInput" placeholder="Write a true or false statement..." maxlength="120">
-          <div class="truth-toggle">
-            <button id="truthMarkTrueBtn">This is TRUE</button>
-            <button id="truthMarkFalseBtn">This is FALSE</button>
-          </div>
-          <button class="btn-primary" id="truthSubmitBtn" disabled>Send Statement</button>
-        </div>
-        <div id="truthGuesserArea" style="display:none;">
-          <div class="truth-statement" id="truthStatementDisplay">Waiting for a statement...</div>
-          <div class="truth-toggle">
-            <button id="truthGuessTrueBtn">I think TRUE</button>
-            <button id="truthGuessFalseBtn">I think FALSE</button>
-          </div>
-        </div>
-        <div class="truth-result" id="truthResult"></div>
-        <div class="score-line" id="truthScoreLine">Score — You: 0 · Opponent: 0</div>
-      </div>
-
-      <!-- Number Duel (Nim) -->
-      <div id="panel-nim" class="board-panel">
-        <div class="turn-banner" id="nimBanner">Connecting...</div>
-        <div class="help-text">Take turns removing 1, 2, or 3 tokens from the shared pile. Whoever takes the last token wins the round.</div>
-        <div class="nim-pile" id="nimPileEl"></div>
-        <div class="nim-controls">
-          <button class="btn-primary" id="nimTake1Btn">Take 1</button>
-          <button class="btn-primary" id="nimTake2Btn">Take 2</button>
-          <button class="btn-primary" id="nimTake3Btn">Take 3</button>
-        </div>
-        <div class="score-line" id="nimScoreLine">Wins — You: 0 · Opponent: 0</div>
-        <div class="controls-row">
-          <button class="btn-secondary" id="nimRematchBtn">🔄 New Pile</button>
-        </div>
-      </div>
-
-      <!-- Countdown Math -->
-      <div id="panel-math" class="board-panel">
-        <div class="turn-banner" id="mathBanner">Connecting...</div>
-        <div class="help-text">A target number appears — race to type an equation that equals it. First correct answer wins the round.</div>
-        <div class="math-target" id="mathTargetEl">—</div>
-        <div class="math-input-row">
-          <input type="text" id="mathInput" placeholder="e.g. 6*7+3" disabled>
-          <button class="btn-primary" id="mathSubmitBtn" disabled>Submit</button>
-        </div>
-        <div class="math-feedback" id="mathFeedback"></div>
-        <div class="score-line" id="mathScoreLine">Wins — You: 0 · Opponent: 0</div>
-        <div class="controls-row">
-          <button class="btn-secondary" id="mathNewRoundBtn">🎯 New Target</button>
-        </div>
-      </div>
-
-      <!-- Color Match -->
-      <div id="panel-colormatch" class="board-panel">
-        <div class="turn-banner" id="colorBanner">First to 5 wins the duel 🌈</div>
-        <div class="help-text">Both hit "I'm Ready". A color word flashes in a colored font — hit Match if the word and its color are the same, No Match if they differ. Fastest correct answer scores.</div>
-        <div class="color-trial" id="colorTrialEl">Click "I'm Ready" to begin</div>
-        <div class="color-buttons">
-          <button class="btn-primary" id="colorMatchBtn" disabled>✅ Match</button>
-          <button class="btn-secondary" id="colorNoMatchBtn" disabled>❌ No Match</button>
-        </div>
-        <div class="controls-row">
-          <button class="btn-primary" id="colorReadyBtn">I'm Ready</button>
-        </div>
-        <div class="score-line" id="colorScoreLine">Score — You: 0 · Opponent: 0</div>
-      </div>
-
+<div id="setup">
+  <div class="card">
+    <h2 class="brand">jaradCodes 💛</h2>
+    <p class="sub">A little Ludo, made for two. Create a game and send the link + code to your player two — anywhere, WhatsApp works great.</p>
+    <div class="tabs">
+      <button id="tabCreate" class="active">Create game</button>
+      <button id="tabJoin">Join game</button>
     </div>
 
-    <div class="chat-panel">
-      <div class="chat-header">💬 Chat</div>
-      <div id="messages"></div>
-      <div class="typing-indicator" id="typingIndicator">&nbsp;</div>
-      <div class="chat-input-row">
-        <input type="text" id="chatInput" placeholder="Say something..." maxlength="300">
-        <button id="sendChatBtn">Send</button>
+    <div id="paneCreate">
+      <label>Your name</label>
+      <input type="text" id="nameHost" placeholder="e.g. Jarad" maxlength="16">
+      <button class="btn btn-primary" id="btnCreate">Create game (you play Red)</button>
+      <div id="hostIdBox" class="id-box hidden">
+        <code id="hostIdText">…</code>
+        <button id="copyId" title="Copy">📋</button>
       </div>
+      <p class="hint" id="hostStatus"></p>
+    </div>
+
+    <div id="paneJoin" class="hidden">
+      <label>Your name</label>
+      <input type="text" id="nameJoin" placeholder="e.g. You" maxlength="16">
+      <label>Game code from your partner</label>
+      <input type="text" id="joinId" placeholder="paste the code here">
+      <button class="btn btn-primary" id="btnJoin">Join game (you play Yellow)</button>
+      <p class="hint" id="joinStatus"></p>
     </div>
   </div>
 </div>
 
-<footer>Made for fun, competition, and connection. 🎮</footer>
+<div class="app">
+  <header class="top">
+    <div class="brand">jaradCodes<small>ludo, but ours</small></div>
+    <div class="status-pill" id="connPill">not connected</div>
+  </header>
+
+  <main class="game">
+    <div class="board-wrap">
+      <div class="controls">
+        <div class="turn-flag"><span class="dot" id="turnDot"></span><span id="turnText">—</span></div>
+        <button class="dice-btn" id="diceBtn">?</button>
+      </div>
+      <div class="board" id="board"></div>
+      <div class="log" id="log"></div>
+    </div>
+
+    <aside class="chat-panel" id="chatPanel">
+      <div class="chat-head">
+        <strong>Chat</strong>
+        <button class="min-btn" id="minimizeChat" title="Minimize — go do whatever, we'll keep chatting">↘</button>
+      </div>
+      <div class="chat-msgs" id="chatMsgs"></div>
+      <div class="chat-input">
+        <input type="text" id="chatInput" placeholder="Say something…" maxlength="300">
+        <button id="chatSend">Send</button>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<button class="chat-bubble hidden" id="chatBubble">💬<span class="badge hidden" id="chatBadge">0</span></button>
 
 <script>
+/* ---------------- background stars ---------------- */
 (function(){
-  "use strict";
-  let myColor = null;
-  let oppColor = null;
-  let isHost = false;
-  let myName = 'You';
-  let theirName = 'Opponent';
-  let currentGame = 'c4';
-
-  const connectOverlay = document.getElementById('connectOverlay');
-  const gameEl = document.getElementById('game');
-  const lobbyStatus = document.getElementById('lobbyStatus');
-  const messagesEl = document.getElementById('messages');
-  const chatInput = document.getElementById('chatInput');
-  const sendChatBtn = document.getElementById('sendChatBtn');
-
-  function setLobbyStatus(text){ lobbyStatus.textContent = text; }
-  myName = 'Player' + (1 + Math.floor(Math.random()*98));
-
-  const themeToggle = document.getElementById('themeToggle');
-  const savedTheme = localStorage.getItem('jcf_theme');
-  if(savedTheme==='light'){ document.documentElement.setAttribute('data-theme','light'); themeToggle.textContent='☀️'; }
-  themeToggle.addEventListener('click', () => {
-    const isLight = document.documentElement.getAttribute('data-theme')==='light';
-    if(isLight){ document.documentElement.removeAttribute('data-theme'); themeToggle.textContent='🌙'; localStorage.setItem('jcf_theme','dark'); }
-    else { document.documentElement.setAttribute('data-theme','light'); themeToggle.textContent='☀️'; localStorage.setItem('jcf_theme','light'); }
-  });
-
-  let overallScore = { me: 0, them: 0 };
-  const overallBoard = document.getElementById('overallBoard');
-  function bumpOverall(isMe){
-    if(isMe) overallScore.me++; else overallScore.them++;
-    renderOverall();
+  const s = document.getElementById('stars');
+  for(let i=0;i<60;i++){
+    const d = document.createElement('span');
+    d.style.left = Math.random()*100+'%';
+    d.style.top = Math.random()*100+'%';
+    d.style.animationDelay = (Math.random()*4)+'s';
+    d.style.opacity = Math.random();
+    s.appendChild(d);
   }
-  function renderOverall(){
-    overallBoard.textContent = 'Overall — You: ' + overallScore.me + ' · Opponent: ' + overallScore.them;
-  }
+})();
 
-  const myId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
-  const ROOM_TOPIC = 'jcodesfun/room/v2';
-  let mqttClient = null;
-  let opponentId = null;
-  let pairLocked = false;
-  let presenceTimer = null;
+/* ---------------- ludo board data ---------------- */
+const LOOP = [
+  [6,1],[6,2],[6,3],[6,4],[6,5],[5,6],[4,6],[3,6],[2,6],[1,6],[0,6],[0,7],[0,8],
+  [1,8],[2,8],[3,8],[4,8],[5,8],[6,9],[6,10],[6,11],[6,12],[6,13],[6,14],[7,14],
+  [8,14],[8,13],[8,12],[8,11],[8,10],[8,9],[9,8],[10,8],[11,8],[12,8],[13,8],[14,8],
+  [14,7],[14,6],[13,6],[12,6],[11,6],[10,6],[9,6],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0],[7,0],[6,0]
+];
+const START = { red:0, yellow:26 };
+const HOME_COL = {
+  red:    [[7,1],[7,2],[7,3],[7,4],[7,5]],
+  yellow: [[7,13],[7,12],[7,11],[7,10],[7,9]]
+};
+/* green/blue home columns are decorative only (no tokens use them in 2-player mode)
+   — they exist so the board's arms look like a complete, real Ludo cross */
+const HOME_COL_DECOR = {
+  green: [[1,7],[2,7],[3,7],[4,7],[5,7]],
+  blue:  [[13,7],[12,7],[11,7],[10,7],[9,7]]
+};
+const BASE_SLOTS = {
+  red:    [[2,2],[2,5],[5,2],[5,5]],
+  yellow: [[11,11],[11,14],[14,11],[14,14]]
+};
+const SAFE_IDX = new Set([0,8,13,21,26,34,39,47]);
+const POWER_TILES = {4:'⚡',17:'🔄',30:'🛡️',43:'⚡',10:'⏪',36:'⏪'};
 
-  // conn is a small shim so all the existing game code (which calls
-  // conn.send(...) and checks conn.open) keeps working unchanged —
-  // only how messages actually travel has changed.
-  const conn = {
-    open: false,
-    send(data){
-      if(!mqttClient || !mqttClient.connected) return;
-      mqttClient.publish(ROOM_TOPIC, JSON.stringify({ id: myId, type: 'game', payload: data }));
-    }
+/* ---------------- game state ---------------- */
+function freshState(){
+  return {
+    turn: 'red',
+    dice: null,
+    awaitingMove: false,
+    consecSix: 0,
+    tokens: {
+      red:    [0,1,2,3].map(id=>({id,status:'base',relPos:-1,shielded:false})),
+      yellow: [0,1,2,3].map(id=>({id,status:'base',relPos:-1,shielded:false}))
+    },
+    log: ['Game started. Red rolls first!'],
+    winner: null
   };
+}
+let state = freshState();
+let myColor = null; // 'red' or 'yellow'
+let myName = 'You';
+let theirName = 'Them';
+let conn = null, peer = null;
+let unread = 0;
 
-  function failConnection(message){
-    connectOverlay.classList.remove('hidden');
-    setLobbyStatus(message);
-    setTimeout(startAutoConnect, 2000);
-  }
+/* ---------------- setup UI ---------------- */
+const tabCreate=document.getElementById('tabCreate'), tabJoin=document.getElementById('tabJoin');
+const paneCreate=document.getElementById('paneCreate'), paneJoin=document.getElementById('paneJoin');
+tabCreate.onclick=()=>{tabCreate.classList.add('active');tabJoin.classList.remove('active');paneCreate.classList.remove('hidden');paneJoin.classList.add('hidden');};
+tabJoin.onclick=()=>{tabJoin.classList.add('active');tabCreate.classList.remove('active');paneJoin.classList.remove('hidden');paneCreate.classList.add('hidden');};
 
-  // Wait for the mqtt library script to finish loading (with a timeout)
-  // instead of assuming it's ready. This is what was crashing before —
-  // "mqtt is not defined" simply meant startAutoConnect ran before the
-  // <script> tag in <head> had finished loading.
-  function waitForMqttLib(callback, attemptsLeft){
-    if(typeof mqtt !== 'undefined'){
-      callback();
-      return;
+document.getElementById('btnCreate').onclick = ()=>{
+  myName = document.getElementById('nameHost').value.trim() || 'Player 1';
+  myColor = 'red';
+  document.getElementById('hostStatus').textContent = 'Setting up…';
+  peer = new Peer();
+  peer.on('open', id=>{
+    document.getElementById('hostIdBox').classList.remove('hidden');
+    document.getElementById('hostIdText').textContent = id;
+    document.getElementById('hostStatus').innerHTML = '<span class="spinner"></span> Waiting for your partner to join…';
+  });
+  peer.on('connection', c=>{
+    conn = c;
+    wireConnection();
+  });
+  peer.on('error', e=>{ document.getElementById('hostStatus').textContent = 'Connection error: '+e.type; });
+};
+document.getElementById('copyId').onclick = ()=>{
+  const t = document.getElementById('hostIdText').textContent;
+  navigator.clipboard && navigator.clipboard.writeText(t);
+  document.getElementById('copyId').textContent = '✅';
+  setTimeout(()=>document.getElementById('copyId').textContent='📋',1200);
+};
+
+document.getElementById('btnJoin').onclick = ()=>{
+  myName = document.getElementById('nameJoin').value.trim() || 'Player 2';
+  myColor = 'yellow';
+  const hostId = document.getElementById('joinId').value.trim();
+  if(!hostId){ document.getElementById('joinStatus').textContent = 'Paste the code first.'; return; }
+  document.getElementById('joinStatus').innerHTML = '<span class="spinner"></span> Connecting…';
+  peer = new Peer();
+  peer.on('open', ()=>{
+    conn = peer.connect(hostId, {reliable:true});
+    wireConnection();
+  });
+  peer.on('error', e=>{ document.getElementById('joinStatus').textContent = 'Connection error: '+e.type; });
+};
+
+function wireConnection(){
+  conn.on('open', ()=>{
+    document.getElementById('setup').classList.add('hidden');
+    document.getElementById('connPill').textContent = 'connected 🟢';
+    document.getElementById('connPill').classList.add('live');
+    if(myColor==='red'){
+      state = freshState();
+      send({type:'init', state});
     }
-    if(attemptsLeft <= 0){
-      setLobbyStatus('Could not load the connection library. Check your internet connection, disable any ad blocker for this page, then refresh.');
-      return;
-    }
-    setTimeout(() => waitForMqttLib(callback, attemptsLeft - 1), 300);
+    send({type:'hello', name:myName});
+    render();
+  });
+  conn.on('data', handleData);
+  conn.on('close', ()=>{
+    document.getElementById('connPill').textContent = 'disconnected';
+    document.getElementById('connPill').classList.remove('live');
+    addSysMsg('Connection lost. Ask your partner to refresh and reconnect.');
+  });
+}
+
+function send(msg){ if(conn && conn.open) conn.send(msg); }
+
+function handleData(msg){
+  if(msg.type==='hello'){ theirName = msg.name; addSysMsg(theirName+' joined the game 🎉'); }
+  else if(msg.type==='init'){ state = msg.state; render(); }
+  else if(msg.type==='state'){ state = msg.state; render(); }
+  else if(msg.type==='chat'){ addChatMsg(msg.text, false); }
+}
+
+/* ---------------- board rendering ---------------- */
+const boardEl = document.getElementById('board');
+function buildStaticBoard(){
+  boardEl.innerHTML='';
+  // zones
+  addZone('red',1,1,6,6);
+  addZone('green',1,10,6,6);
+  addZone('blue',10,1,6,6);
+  addZone('yellow',10,10,6,6);
+  // base slots
+  Object.entries(BASE_SLOTS).forEach(([color,slots])=>{
+    slots.forEach(([r,c])=>{
+      const d=document.createElement('div');
+      d.style.gridRow=r; d.style.gridColumn=c;
+      d.className='base-slot';
+      d.id=`slot-${color}-${r}-${c}`;
+      boardEl.appendChild(d);
+    });
+  });
+  // loop path cells
+  LOOP.forEach(([r,c],idx)=>{
+    const cell=document.createElement('div');
+    cell.style.gridRow=r+1; cell.style.gridColumn=c+1;
+    cell.className='cell path';
+    if(idx===START.red) cell.classList.add('start-red');
+    if(idx===START.yellow) cell.classList.add('start-yellow');
+    if(SAFE_IDX.has(idx)) cell.classList.add('safe');
+    if(POWER_TILES[idx]){ cell.classList.add('power'); cell.textContent=POWER_TILES[idx]; }
+    cell.dataset.loopIdx = idx;
+    boardEl.appendChild(cell);
+  });
+  // home columns
+  Object.entries(HOME_COL).forEach(([color,cells])=>{
+    cells.forEach(([r,c])=>{
+      const cell=document.createElement('div');
+      cell.style.gridRow=r+1; cell.style.gridColumn=c+1;
+      cell.className='cell home-'+color;
+      boardEl.appendChild(cell);
+    });
+  });
+  // center diamond
+  const diamond=document.createElement('div');
+  diamond.className='center-diamond';
+  diamond.style.gridRow='7 / 10'; diamond.style.gridColumn='7 / 10';
+  diamond.textContent='💛';
+  boardEl.appendChild(diamond);
+}
+function addZone(color,r,c,h,w){
+  const z=document.createElement('div');
+  z.className='zone '+color;
+  z.style.gridRow=`${r} / span ${h}`; z.style.gridColumn=`${c} / span ${w}`;
+  const inner=document.createElement('div'); inner.className='zone-inner';
+  z.appendChild(inner);
+  boardEl.appendChild(z);
+}
+buildStaticBoard();
+
+function cellCoordFor(color,tok){
+  if(tok.status==='base') return null;
+  if(tok.status==='home') return null;
+  if(tok.relPos<=50){
+    const idx=(START[color]+tok.relPos)%52;
+    return LOOP[idx];
+  } else {
+    return HOME_COL[color][tok.relPos-51];
+  }
+}
+
+let tokenEls = {red:[],yellow:[]};
+function renderTokens(){
+  ['red','yellow'].forEach(color=>{
+    tokenEls[color].forEach(el=>el.remove());
+    tokenEls[color]=[];
+    state.tokens[color].forEach(tok=>{
+      const el=document.createElement('div');
+      el.className='token '+color+'-tok';
+      el.textContent = tok.id+1;
+      if(tok.shielded) el.classList.add('shielded');
+      let pos;
+      if(tok.status==='base'){ pos = BASE_SLOTS[color][tok.id]; }
+      else if(tok.status==='home'){ pos = null; }
+      else { pos = cellCoordFor(color,tok); }
+      if(pos){
+        el.style.gridRow=pos[0]+1; el.style.gridColumn=pos[1]+1;
+      } else if(tok.status==='home'){
+        el.style.gridRow='8'; el.style.gridColumn='8';
+        el.style.zIndex=6;
+      }
+      if(isMovable(color,tok)) el.classList.add('movable');
+      el.onclick = ()=>attemptMove(color,tok.id);
+      boardEl.appendChild(el);
+      tokenEls[color].push(el);
+    });
+  });
+}
+
+/* ---------------- game logic ---------------- */
+function isMovable(color,tok){
+  if(state.winner) return false;
+  if(color!==myColor || state.turn!==myColor) return false;
+  if(!state.awaitingMove || state.dice==null) return false;
+  if(tok.status==='home') return false;
+  if(tok.status==='base') return state.dice===6;
+  const newRel = tok.relPos + state.dice;
+  return newRel<=56;
+}
+
+function anyMovable(color){
+  return state.tokens[color].some(t=>isMovable(color,t));
+}
+
+const diceBtn = document.getElementById('diceBtn');
+diceBtn.onclick = ()=>{
+  if(state.turn!==myColor || state.awaitingMove || state.winner) return;
+  let rolls=0;
+  const spin=setInterval(()=>{ diceBtn.textContent = 1+Math.floor(Math.random()*6); rolls++;
+    if(rolls>8){ clearInterval(spin); finalizeDice(); }
+  },60);
+};
+
+function finalizeDice(){
+  const val = 1+Math.floor(Math.random()*6);
+  diceBtn.textContent = val;
+  state.dice = val;
+  state.awaitingMove = true;
+  if(val===6) state.consecSix++; else state.consecSix=0;
+  pushLog(`${labelFor(myColor)} rolled a ${val}.`);
+  if(!anyMovable(myColor)){
+    pushLog(`No legal moves for ${labelFor(myColor)} — turn passes.`);
+    setTimeout(passTurn, 700);
+  } else {
+    render(); broadcast();
+  }
+}
+
+function attemptMove(color,tokId){
+  if(color!==myColor || state.turn!==myColor || !state.awaitingMove) return;
+  const tok = state.tokens[color].find(t=>t.id===tokId);
+  if(!isMovable(color,tok)) return;
+
+  let captured=false, powered=null;
+  if(tok.status==='base'){
+    tok.status='active'; tok.relPos=0;
+  } else {
+    tok.relPos += state.dice;
+    if(tok.relPos===56){ tok.status='home'; }
   }
 
-  function startAutoConnect(){
-    setLobbyStatus('Connecting...');
-    waitForMqttLib(reallyStartAutoConnect, 30); // retries for ~9 seconds
-  }
-
-  function reallyStartAutoConnect(){
-    if(mqttClient){ try { mqttClient.end(true); } catch(e){} }
-    opponentId = null; pairLocked = false; conn.open = false;
-    clearInterval(presenceTimer);
-
-    mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
-      clientId: 'jcf_' + myId,
-      reconnectPeriod: 2000,
-      connectTimeout: 15000,
-      will: { topic: ROOM_TOPIC, payload: JSON.stringify({ id: myId, type: 'bye' }), qos: 0, retain: false }
-    });
-
-    mqttClient.on('connect', () => {
-      mqttClient.subscribe(ROOM_TOPIC);
-      setLobbyStatus('Waiting for opponent to open the page...');
-      const announce = () => {
-        if(!pairLocked) mqttClient.publish(ROOM_TOPIC, JSON.stringify({ id: myId, type: 'presence', name: myName }));
-      };
-      announce();
-      presenceTimer = setInterval(announce, 1500);
-    });
-
-    mqttClient.on('message', (topic, messageBuf) => {
-      let data;
-      try { data = JSON.parse(messageBuf.toString()); } catch(e){ return; }
-      if(!data || data.id === myId) return;
-
-      if(data.type === 'presence'){
-        if(pairLocked) return;
-        opponentId = data.id;
-        pairLocked = true;
-        clearInterval(presenceTimer);
-        isHost = myId < opponentId;
-        myColor = isHost ? 'red' : 'yellow';
-        oppColor = isHost ? 'yellow' : 'red';
-        theirName = data.name || theirName;
-        conn.open = true;
-        startGame();
-        conn.send({ type: 'hello', name: myName });
-      } else if(data.type === 'bye'){
-        if(pairLocked && data.id === opponentId){
-          addSystemMsg(theirName + ' disconnected.');
-          if(connectOverlay.classList.contains('hidden')){
-            // A game was already underway — let them keep playing solo / wait for a rematch,
-            // no need to re-show the overlay.
-          } else {
-            failConnection('The other player disconnected before the game started.');
+  if(tok.status==='active' && tok.relPos<=50){
+    const globalIdx = (START[color]+tok.relPos)%52;
+    // capture check
+    if(!SAFE_IDX.has(globalIdx)){
+      const oppColor = color==='red'?'yellow':'red';
+      state.tokens[oppColor].forEach(ot=>{
+        if(ot.status==='active' && ot.relPos<=50 && !ot.shielded){
+          const otIdx=(START[oppColor]+ot.relPos)%52;
+          if(otIdx===globalIdx){
+            ot.status='base'; ot.relPos=-1;
+            captured=true;
+            pushLog(`💥 ${labelFor(color)} sent ${labelFor(oppColor)}'s token ${ot.id+1} home!`);
           }
         }
-      } else if(data.type === 'game' && pairLocked && data.id === opponentId){
-        handleData(data.payload);
-      }
-    });
-
-    mqttClient.on('error', () => { setLobbyStatus('Connection hiccup, reconnecting...'); });
-  }
-
-  startAutoConnect();
-
-  function startGame(){
-    connectOverlay.classList.add('hidden');
-    c4Init(); c4Render(); c4UpdateBanner();
-    tttInit(); tttRender();
-    ludoState = ludoFresh(); ludoRender();
-    tapReset(); tapRender();
-    rpsReset(); rpsRender();
-    guessInit(); guessRenderRoles(); guessRenderScore();
-    wyrReset();
-    if(isHost){ memoryState = memoryFreshState(); memorySend(); }
-    memoryRender();
-    drawInit();
-    truthInit();
-    nimInit();
-    mathInit();
-    colorInit();
-    switchTab('c4', false);
-  }
-
-  function handleData(data){
-    if(data.type === 'hello'){
-      theirName = data.name || theirName;
-      c4P1.textContent = isHost ? myName+' (You)' : theirName;
-      c4P2.textContent = isHost ? theirName : myName+' (You)';
-      addSystemMsg(theirName + ' joined the game!');
-    } else if(data.type === 'chat'){
-      addMsg(data.text, 'them');
-      hideTyping();
-      drawCheckGuess(data.text);
-    } else if(data.type === 'typing'){
-      showTyping();
-    } else if(data.type === 'switchGame'){
-      switchTab(data.game, false);
-    } else if(data.type === 'c4Move'){
-      c4ApplyMove(data.col, false);
-    } else if(data.type === 'c4Rematch'){
-      c4Init(); c4Render(); c4UpdateBanner();
-      addSystemMsg('New Connect 4 round started.');
-    } else if(data.type === 'c4ResetScore'){
-      c4Score = {red:0, yellow:0}; c4RenderScore();
-    } else if(data.type === 'tttMove'){
-      tttApplyMove(data.idx, false);
-    } else if(data.type === 'tttRematch'){
-      tttBoard = Array(9).fill(null); tttTurn='X'; tttOver=false; tttRender();
-      addSystemMsg('New Tic-Tac-Toe round started.');
-    } else if(data.type === 'tttReset'){
-      tttScore = {X:0,O:0}; tttOver=false; tttBoard=Array(9).fill(null); tttTurn='X'; tttRender();
-    } else if(data.type === 'ludoState'){
-      const wasWon = ludoWinner();
-      ludoState = data.state; ludoRender();
-      const nowWon = ludoWinner();
-      if(nowWon && !wasWon){ ludoAnnounced = true; bumpOverall(nowWon===myColor); }
-    } else if(data.type === 'ludoRematch'){
-      ludoState = ludoFresh(); ludoAnnounced = false; ludoRender();
-      addSystemMsg('New Ludo race started.');
-    } else if(data.type === 'tapReady'){
-      tapReadyThem = true; tapMaybeStart();
-    } else if(data.type === 'tapGo'){
-      tapBeginCountdown(data.delay);
-    } else if(data.type === 'tapResult'){
-      tapTheirResult = data.falseStart ? 'FALSE' : data.time;
-      tapMaybeFinish();
-    } else if(data.type === 'tapNext'){
-      tapReset(); tapRender();
-    } else if(data.type === 'rpsChoice'){
-      rpsTheirChoice = data.choice; rpsResolve();
-    } else if(data.type === 'guessStart'){
-      guessSecret = 'SET';
-      guessGuesserArea.style.display='block'; guessSetterArea.style.display='none';
-      guessFeedback.textContent = 'Go ahead, guess a number 1-100!';
-      guessHistory.textContent = '';
-    } else if(data.type === 'guessTry'){
-      guessHandleIncomingTry(data.value);
-    } else if(data.type === 'guessFeedback'){
-      guessApplyFeedback(data.value, data.result, data.attempts);
-      guessScore.red = data.scoreRed; guessScore.yellow = data.scoreYellow;
-      guessRenderScore();
-      if(data.result === 'correct'){
-        bumpOverall(true);
-        guessRoundOwner = data.newOwner; guessSecret = null; guessAttempts = 0;
-        guessRenderRoles();
-      }
-    } else if(data.type === 'wyrNewPrompt'){
-      wyrShowQuestion(data.idx);
-    } else if(data.type === 'wyrPick'){
-      wyrTheirPick = data.choice; wyrCheckReveal();
-    } else if(data.type === 'memoryState'){
-      const wasComplete = memoryState && memoryState.matched.every(m=>m);
-      memoryState = data.state;
-      memoryRender();
-      const nowComplete = memoryState.matched.every(m=>m);
-      if(nowComplete && !wasComplete && memoryState.scoreRed !== memoryState.scoreYellow){
-        const winnerColor = memoryState.scoreRed > memoryState.scoreYellow ? 'red' : 'yellow';
-        bumpOverall(winnerColor === myColor);
-      }
-    } else if(data.type === 'drawStroke'){
-      drawLineSegment(drawCtx, data.x1, data.y1, data.x2, data.y2);
-    } else if(data.type === 'drawNewRound'){
-      drawWordLength = data.wordLength;
-      drawGuessed = false;
-      drawWord = null;
-      drawClearCanvas();
-      drawRender();
-    } else if(data.type === 'drawClear'){
-      drawClearCanvas();
-    } else if(data.type === 'drawCorrect'){
-      drawWord = data.word;
-      drawScore.red = data.scoreRed;
-      drawScore.yellow = data.scoreYellow;
-      drawOwner = data.newDrawer;
-      drawGuessed = true;
-      const iWon = data.newDrawer === myColor;
-      bumpOverall(iWon);
-      addSystemMsg((iWon ? 'You' : theirName) + ' guessed it! The word was "' + data.word + '"');
-      drawRender();
-    } else if(data.type === 'truthStatement'){
-      truthHandleStatement(data.text);
-    } else if(data.type === 'truthGuess'){
-      truthHandleGuess(data.guess);
-    } else if(data.type === 'truthReveal'){
-      truthApplyReveal(data);
-    } else if(data.type === 'nimMove'){
-      nimApplyMove(data.n, false);
-    } else if(data.type === 'nimRematch'){
-      nimInit();
-      addSystemMsg('New pile started.');
-    } else if(data.type === 'mathNewRound'){
-      mathTarget = data.target; mathOver = false; mathInput.value=''; mathFeedback.textContent='';
-      mathRender();
-    } else if(data.type === 'mathWin'){
-      if(!mathOver){
-        mathOver = true;
-        mathScore.red = data.scoreRed; mathScore.yellow = data.scoreYellow;
-        const iWonMath = data.winner === myColor;
-        bumpOverall(iWonMath);
-        addSystemMsg((iWonMath ? 'You' : theirName) + ' solved it! ' + data.expr + ' = ' + mathTarget);
-        mathRender();
-      }
-    } else if(data.type === 'colorReady'){
-      colorReadyThem = true; colorMaybeStart();
-    } else if(data.type === 'colorGo'){
-      colorStartTrial(data.trial);
-    } else if(data.type === 'colorResult'){
-      colorTheirCorrect = data.correct; colorTheirTime = data.time; colorMaybeFinish();
-    }
-  }
-
-  const typingIndicator = document.getElementById('typingIndicator');
-  let typingTimeout = null;
-  function showTyping(){
-    typingIndicator.textContent = theirName + ' is typing...';
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(hideTyping, 2000);
-  }
-  function hideTyping(){ typingIndicator.textContent = '\u00A0'; }
-
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.game, true));
-  });
-  function switchTab(game, broadcast){
-    document.querySelectorAll('.board-panel').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById('panel-'+game).classList.add('active');
-    document.querySelector('.tab-btn[data-game="'+game+'"]').classList.add('active');
-    currentGame = game;
-    if(game==='draw') drawRender();
-    if(broadcast && conn && conn.open) conn.send({type:'switchGame', game});
-  }
-
-  const ROWS=6, COLS=7;
-  const c4Board = document.getElementById('c4Board');
-  const c4TurnBanner = document.getElementById('c4TurnBanner');
-  const c4P1 = document.getElementById('c4P1');
-  const c4P2 = document.getElementById('c4P2');
-  const c4ScoreLine = document.getElementById('c4ScoreLine');
-  let c4Grid = [], c4Turn = 'red', c4Over = false;
-  let c4Score = {red:0, yellow:0};
-
-  function c4Init(){
-    c4Grid = [];
-    for(let c=0;c<COLS;c++) c4Grid.push([]);
-    c4Turn = 'red'; c4Over = false;
-    c4TurnBanner.classList.remove('celebrate');
-  }
-
-  function c4Render(){
-    c4Board.innerHTML = '';
-    for(let c=0;c<COLS;c++){
-      const colEl = document.createElement('div');
-      colEl.className = 'col' + ((c4Over || c4Turn!==myColor) ? ' disabled':'');
-      colEl.dataset.col = c;
-      for(let r=0;r<ROWS;r++){
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        const val = c4Grid[c][r];
-        if(val) cell.classList.add(val);
-        colEl.appendChild(cell);
-      }
-      colEl.addEventListener('click', c4OnClick);
-      c4Board.appendChild(colEl);
-    }
-  }
-
-  function c4OnClick(e){
-    if(c4Over) return;
-    if(c4Turn !== myColor) return;
-    const c = parseInt(e.currentTarget.dataset.col, 10);
-    if(c4Grid[c].length >= ROWS) return;
-    c4ApplyMove(c, true);
-  }
-
-  function c4ApplyMove(col, isMine){
-    if(c4Grid[col].length >= ROWS) return;
-    const color = c4Turn;
-    c4Grid[col].push(color);
-    if(isMine && conn && conn.open) conn.send({ type: 'c4Move', col: col });
-    c4Render();
-    const win = c4CheckWin(col, c4Grid[col].length - 1, color);
-    if(win){
-      c4Over = true;
-      c4Highlight(win);
-      const winnerName = (color === myColor) ? myName : theirName;
-      c4Score[color] = (c4Score[color]||0) + 1;
-      c4RenderScore();
-      bumpOverall(color === myColor);
-      c4TurnBanner.textContent = '🎉 ' + winnerName + ' wins the round!';
-      c4TurnBanner.className = 'turn-banner turn-over celebrate';
-      addSystemMsg(winnerName + ' won the round! Click Rematch to play again.');
-      return;
-    }
-    if(c4Grid.every(colArr => colArr.length >= ROWS)){
-      c4Over = true;
-      c4TurnBanner.textContent = "It's a draw!";
-      c4TurnBanner.className = 'turn-banner turn-over';
-      addSystemMsg('The board is full — a draw!');
-      return;
-    }
-    c4Turn = (c4Turn === 'red') ? 'yellow' : 'red';
-    c4UpdateBanner();
-  }
-
-  function c4UpdateBanner(){
-    if(c4Over) return;
-    if(c4Turn === myColor){
-      c4TurnBanner.textContent = "Your turn — drop a piece!";
-      c4TurnBanner.className = 'turn-banner turn-you';
-    } else {
-      c4TurnBanner.textContent = theirName + "'s turn...";
-      c4TurnBanner.className = 'turn-banner turn-them';
-    }
-    c4Render();
-  }
-
-  function c4RenderScore(){
-    const mine = c4Score[myColor]||0, theirs = c4Score[oppColor]||0;
-    c4ScoreLine.textContent = 'Wins — You: ' + mine + ' · Opponent: ' + theirs;
-  }
-
-  function c4CheckWin(col, row, color){
-    const dirs = [
-      [[0,1],[0,-1]], [[1,0],[-1,0]], [[1,1],[-1,-1]], [[1,-1],[-1,1]]
-    ];
-    for(const dirPair of dirs){
-      let cells = [[col,row]];
-      for(const [dc,dr] of dirPair){
-        let cc = col, rr = row;
-        while(true){
-          cc += dc; rr += dr;
-          if(cc<0||cc>=COLS||rr<0||rr>=ROWS) break;
-          if(c4Grid[cc][rr] === color){ cells.push([cc,rr]); }
-          else break;
-        }
-      }
-      if(cells.length >= 4) return cells;
-    }
-    return null;
-  }
-
-  function c4Highlight(cells){
-    const colEls = c4Board.querySelectorAll('.col');
-    for(const [c,r] of cells){
-      colEls[c].children[r].classList.add('win-cell');
-    }
-  }
-
-  document.getElementById('c4RematchBtn').addEventListener('click', () => {
-    c4Init(); c4Render(); c4UpdateBanner();
-    if(conn && conn.open) conn.send({type: 'c4Rematch'});
-    addSystemMsg('You started a new round.');
-  });
-  document.getElementById('c4ResetBtn').addEventListener('click', () => {
-    c4Score = {red:0, yellow:0}; c4RenderScore();
-    if(conn && conn.open) conn.send({type: 'c4ResetScore'});
-  });
-  c4RenderScore();
-
-  const tttBoardEl = document.getElementById('tttBoard');
-  const tttTurnBanner = document.getElementById('tttTurnBanner');
-  const tttMySymbolEl = document.getElementById('tttMySymbol');
-  const tttOppSymbolEl = document.getElementById('tttOppSymbol');
-  const tttScoreLine = document.getElementById('tttScoreLine');
-  let tttBoard = Array(9).fill(null);
-  let tttTurn = 'X';
-  let tttOver = false;
-  let tttScore = {X:0, O:0};
-  let mySymbol, oppSymbol;
-
-  function tttInit(){
-    mySymbol = isHost ? 'X' : 'O';
-    oppSymbol = isHost ? 'O' : 'X';
-    tttMySymbolEl.textContent = mySymbol;
-    tttOppSymbolEl.textContent = oppSymbol;
-  }
-
-  const TTT_WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-
-  function tttRender(){
-    tttBoardEl.innerHTML = '';
-    for(let i=0;i<9;i++){
-      const cell = document.createElement('div');
-      cell.className = 'ttt-cell' + (tttOver || tttTurn!==mySymbol || tttBoard[i] ? ' disabled' : '');
-      const v = tttBoard[i];
-      if(v){ cell.textContent = v; cell.classList.add(v.toLowerCase()); }
-      cell.addEventListener('click', () => tttOnClick(i));
-      tttBoardEl.appendChild(cell);
-    }
-    tttTurnBanner.classList.remove('celebrate');
-    if(!tttOver){
-      if(tttTurn === mySymbol){
-        tttTurnBanner.textContent = "Your turn — place " + mySymbol;
-        tttTurnBanner.className = 'turn-banner turn-you';
-      } else {
-        tttTurnBanner.textContent = theirName + "'s turn...";
-        tttTurnBanner.className = 'turn-banner turn-them';
-      }
-    }
-    tttScoreLine.textContent = 'First to 3 wins the match — You ' + tttScore[mySymbol] + ' : ' + tttScore[oppSymbol] + ' Opponent';
-  }
-
-  function tttOnClick(idx){
-    if(tttOver || tttTurn !== mySymbol || tttBoard[idx]) return;
-    tttApplyMove(idx, true);
-  }
-
-  function tttApplyMove(idx, isMine){
-    if(tttBoard[idx]) return;
-    const symbol = tttTurn;
-    tttBoard[idx] = symbol;
-    if(isMine && conn && conn.open) conn.send({type:'tttMove', idx: idx});
-    const winLine = TTT_WINS.find(line => line.every(i => tttBoard[i]===symbol));
-    if(winLine){
-      tttOver = true;
-      tttScore[symbol] = (tttScore[symbol]||0) + 1;
-      const winnerName = symbol===mySymbol ? myName : theirName;
-      bumpOverall(symbol === mySymbol);
-      tttRender();
-      winLine.forEach(i => tttBoardEl.children[i].classList.add('win'));
-      const matchWon = tttScore[symbol] >= 3;
-      tttTurnBanner.textContent = (matchWon ? '🏆 ' : '🎉 ') + winnerName + (matchWon ? ' WINS THE MATCH!' : ' wins the round!');
-      tttTurnBanner.className = 'turn-banner turn-over celebrate';
-      addSystemMsg(winnerName + (matchWon ? ' won the match! Reset to play again.' : ' won the round!'));
-      return;
-    }
-    if(tttBoard.every(v=>v)){
-      tttOver = true;
-      tttRender();
-      tttTurnBanner.textContent = "It's a draw!";
-      tttTurnBanner.className = 'turn-banner turn-over';
-      addSystemMsg('Tic-Tac-Toe round was a draw!');
-      return;
-    }
-    tttTurn = symbol === 'X' ? 'O' : 'X';
-    tttRender();
-  }
-
-  document.getElementById('tttRematchBtn').addEventListener('click', () => {
-    tttBoard = Array(9).fill(null); tttTurn='X'; tttOver=false; tttRender();
-    if(conn && conn.open) conn.send({type:'tttRematch'});
-    addSystemMsg('You started a new round.');
-  });
-  document.getElementById('tttResetBtn').addEventListener('click', () => {
-    tttScore = {X:0,O:0}; tttOver=false; tttBoard=Array(9).fill(null); tttTurn='X'; tttRender();
-    if(conn && conn.open) conn.send({type:'tttReset'});
-  });
-
-  const ludoRing = document.getElementById('ludoRing');
-  const ludoTurnBanner = document.getElementById('ludoTurnBanner');
-  const ludoRedTokensEl = document.getElementById('ludoRedTokens');
-  const ludoYellowTokensEl = document.getElementById('ludoYellowTokens');
-  const ludoRollBtn = document.getElementById('ludoRollBtn');
-
-  const LUDO_START = { red: 29, yellow: 9 };
-  const LUDO_SAFE = [29, 9, 39, 19];
-
-  function ludoRingCoords(){
-    const coords = [];
-    for(let c=1;c<=11;c++) coords.push([1,c]);
-    for(let r=2;r<=11;r++) coords.push([r,11]);
-    for(let c=10;c>=1;c--) coords.push([11,c]);
-    for(let r=10;r>=2;r--) coords.push([r,1]);
-    return coords;
-  }
-  const LUDO_COORDS = ludoRingCoords();
-
-  function ludoFresh(){
-    return {
-      tokens: {
-        red:    [{status:'yard',steps:0},{status:'yard',steps:0},{status:'yard',steps:0},{status:'yard',steps:0}],
-        yellow: [{status:'yard',steps:0},{status:'yard',steps:0},{status:'yard',steps:0},{status:'yard',steps:0}]
-      },
-      turn: 'red',
-      lastRoll: null,
-      awaitingMove: false,
-      movable: []
-    };
-  }
-  let ludoState = ludoFresh();
-  let ludoAnnounced = false;
-
-  function ludoGetMovable(color, roll){
-    const toks = ludoState.tokens[color];
-    const movable = [];
-    toks.forEach((t,i)=>{
-      if(t.status==='home') return;
-      if(t.status==='yard'){ if(roll===6) movable.push(i); }
-      else if(t.status==='active'){ movable.push(i); }
-    });
-    return movable;
-  }
-
-  function ludoMoveToken(color, idx, roll){
-    const t = ludoState.tokens[color][idx];
-    if(t.status==='yard'){
-      t.status='active'; t.steps=0;
-    } else {
-      let newSteps = t.steps + roll;
-      if(newSteps>=45){
-        t.steps=45; t.status='home';
-      } else {
-        t.steps=newSteps;
-        if(t.steps<40){
-          const ringIdx = (LUDO_START[color]+t.steps)%40;
-          const opp = color==='red' ? 'yellow' : 'red';
-          ludoState.tokens[opp].forEach(ot=>{
-            if(ot.status==='active'){
-              const otIdx = (LUDO_START[opp]+ot.steps)%40;
-              if(otIdx===ringIdx && LUDO_SAFE.indexOf(ringIdx)===-1){
-                ot.status='yard'; ot.steps=0;
-              }
-            }
-          });
-        }
-      }
-    }
-  }
-
-  function ludoWinner(){
-    if(ludoState.tokens.red.every(t=>t.status==='home')) return 'red';
-    if(ludoState.tokens.yellow.every(t=>t.status==='home')) return 'yellow';
-    return null;
-  }
-
-  function ludoSend(){
-    if(conn && conn.open) conn.send({type:'ludoState', state: ludoState});
-  }
-
-  function ludoRoll(){
-    if(ludoWinner()) return;
-    if(ludoState.turn !== myColor) return;
-    if(ludoState.awaitingMove) return;
-    const roll = 1 + Math.floor(Math.random()*6);
-    ludoState.lastRoll = roll;
-    const movable = ludoGetMovable(myColor, roll);
-    if(movable.length===0){
-      addSystemMsg('Rolled a ' + roll + ' — no valid moves, turn passes.');
-      ludoState.turn = oppColor;
-      ludoSend(); ludoRender();
-      return;
-    }
-    ludoState.awaitingMove = true;
-    ludoState.movable = movable;
-    ludoRender();
-  }
-
-  function ludoPick(color, idx){
-    if(color !== myColor) return;
-    if(!ludoState.awaitingMove) return;
-    if(ludoState.turn !== myColor) return;
-    if(ludoState.movable.indexOf(idx)===-1) return;
-    ludoMoveToken(myColor, idx, ludoState.lastRoll);
-    ludoState.awaitingMove = false;
-    ludoState.movable = [];
-    const w = ludoWinner();
-    if(w){
-      if(!ludoAnnounced){ ludoAnnounced = true; bumpOverall(w===myColor); }
-    } else if(ludoState.lastRoll !== 6){
-      ludoState.turn = oppColor;
-    }
-    ludoSend();
-    ludoRender();
-  }
-
-  function ludoTokenLabel(t){
-    if(t.status==='yard') return 'Yard';
-    if(t.status==='home') return 'Home';
-    return String(t.steps);
-  }
-
-  function ludoRender(){
-    ludoRing.innerHTML = '';
-    LUDO_COORDS.forEach((rc, idx) => {
-      const cell = document.createElement('div');
-      cell.className = 'ludo-cell';
-      cell.style.gridRow = rc[0];
-      cell.style.gridColumn = rc[1];
-      if(idx===LUDO_START.red) cell.classList.add('start-red');
-      if(idx===LUDO_START.yellow) cell.classList.add('start-yellow');
-      if(LUDO_SAFE.indexOf(idx)!==-1) cell.classList.add('safe');
-      ludoRing.appendChild(cell);
-    });
-    const center = document.createElement('div');
-    center.className = 'ludo-center';
-    const dice = document.createElement('div');
-    dice.className = 'ludo-center-dice';
-    dice.textContent = ludoState.lastRoll ? '🎲 ' + ludoState.lastRoll : '🎲';
-    const turnTxt = document.createElement('div');
-    turnTxt.className = 'ludo-center-turn';
-    const w = ludoWinner();
-    if(w){
-      const winnerName = w===myColor ? myName : theirName;
-      turnTxt.textContent = winnerName + ' wins the race!';
-    } else {
-      turnTxt.textContent = ludoState.turn===myColor ? 'Your turn' : theirName + "'s turn";
-    }
-    center.appendChild(dice); center.appendChild(turnTxt);
-    ludoRing.appendChild(center);
-
-    ['red','yellow'].forEach(color => {
-      ludoState.tokens[color].forEach((t) => {
-        if(t.status==='active' && t.steps<40){
-          const ringIdx = (LUDO_START[color]+t.steps)%40;
-          const rc = LUDO_COORDS[ringIdx];
-          const tok = document.createElement('div');
-          tok.className = 'ludo-token ' + color;
-          tok.style.gridRow = rc[0];
-          tok.style.gridColumn = rc[1];
-          tok.style.position = 'relative';
-          tok.style.top = '0'; tok.style.left = '0'; tok.style.transform='none';
-          ludoRing.appendChild(tok);
-        }
       });
-    });
-
-    ['red','yellow'].forEach(color => {
-      const container = color==='red' ? ludoRedTokensEl : ludoYellowTokensEl;
-      container.innerHTML = '';
-      ludoState.tokens[color].forEach((t, i) => {
-        const btn = document.createElement('div');
-        btn.className = 'ludo-token-btn ' + color + '-tok' + (t.status==='home' ? ' home':'');
-        const movableNow = color===myColor && ludoState.awaitingMove && ludoState.turn===myColor && ludoState.movable.indexOf(i)!==-1;
-        if(movableNow) btn.classList.add('movable');
-        btn.textContent = ludoTokenLabel(t);
-        btn.addEventListener('click', () => ludoPick(color, i));
-        container.appendChild(btn);
-      });
-    });
-
-    ludoTurnBanner.classList.remove('celebrate');
-    if(w){
-      const winnerName = w===myColor ? myName : theirName;
-      ludoTurnBanner.textContent = '🏆 ' + winnerName + ' WINS THE RACE!';
-      ludoTurnBanner.className = 'turn-banner turn-over celebrate';
-      ludoRollBtn.disabled = true;
-    } else if(ludoState.turn===myColor){
-      ludoTurnBanner.textContent = ludoState.awaitingMove ? 'Pick a token to move!' : 'Your turn — roll the dice!';
-      ludoTurnBanner.className = 'turn-banner turn-you';
-      ludoRollBtn.disabled = ludoState.awaitingMove;
-    } else {
-      ludoTurnBanner.textContent = theirName + "'s turn...";
-      ludoTurnBanner.className = 'turn-banner turn-them';
-      ludoRollBtn.disabled = true;
+    }
+    tok.shielded=false;
+    if(POWER_TILES[globalIdx]){
+      powered = POWER_TILES[globalIdx];
+      applyPower(color,tok,powered);
     }
   }
+  if(tok.status==='home') pushLog(`🏠 ${labelFor(color)}'s token ${tok.id+1} made it home!`);
 
-  ludoRollBtn.addEventListener('click', ludoRoll);
-  document.getElementById('ludoRematchBtn').addEventListener('click', () => {
-    ludoState = ludoFresh(); ludoAnnounced = false; ludoRender();
-    if(conn && conn.open) conn.send({type:'ludoRematch'});
-    addSystemMsg('You started a new race.');
-  });
+  checkWin(color);
 
-  const tapArea = document.getElementById('tapArea');
-  const tapReadyBtn = document.getElementById('tapReadyBtn');
-  const tapNextBtn = document.getElementById('tapNextBtn');
-  const tapScoreLine = document.getElementById('tapScoreLine');
-  const tapBanner = document.getElementById('tapBanner');
-
-  let tapPhase = 'idle';
-  let tapReadyMe = false, tapReadyThem = false;
-  let tapStartTs = 0;
-  let tapMyResult = null, tapTheirResult = null;
-  let tapScore = {me:0, them:0};
-
-  function tapReset(){
-    tapPhase='idle'; tapReadyMe=false; tapReadyThem=false;
-    tapMyResult=null; tapTheirResult=null;
-    tapReadyBtn.style.display='inline-block';
-    tapNextBtn.style.display='none';
+  const bonus = (state.dice===6 || captured || state._forceBonus) && state.consecSix<3 && !state.winner;
+  state._forceBonus = false;
+  state.awaitingMove=false; state.dice=null;
+  if(!state.winner){
+    if(bonus){ pushLog(`${labelFor(color)} gets another turn!`); }
+    else { state.turn = color==='red'?'yellow':'red'; state.consecSix=0; }
   }
+  render(); broadcast();
+}
 
-  function tapRender(){
-    tapArea.className = 'tap-area';
-    if(tapPhase==='idle'){
-      tapArea.textContent = 'Click "I\'m Ready" to begin';
-    } else if(tapPhase==='waiting'){
-      tapArea.textContent = 'Waiting for opponent to ready up...';
-    } else if(tapPhase==='countdown'){
-      tapArea.classList.add('countdown');
-      tapArea.textContent = 'Wait for it...';
-    } else if(tapPhase==='live'){
-      tapArea.classList.add('live');
-      tapArea.textContent = 'TAP NOW!';
-    } else if(tapPhase==='falsestart'){
-      tapArea.classList.add('falsestart');
-      tapArea.textContent = 'Too soon! False start.';
-    } else if(tapPhase==='result'){
-      tapArea.classList.add('result');
-      const mine = tapMyResult==='FALSE' ? 'False start' : (tapMyResult + ' ms');
-      const theirs = tapTheirResult==='FALSE' ? 'False start' : (tapTheirResult + ' ms');
-      tapArea.textContent = 'You: ' + mine + ' | Opponent: ' + theirs;
+function applyPower(color,tok,icon){
+  const oppColor = color==='red'?'yellow':'red';
+  if(icon==='⚡'){
+    pushLog(`⚡ Power tile! ${labelFor(color)} gets a free extra turn.`);
+    state.consecSix = 0; // ensure bonus isn't blocked by six-cap
+    // force a bonus turn regardless of dice value by faking a six-flag
+    state._forceBonus = true;
+  } else if(icon==='🔄'){
+    const oppActive = state.tokens[oppColor].filter(t=>t.status==='active' && t.relPos<=50);
+    if(oppActive.length){
+      const target = oppActive[0];
+      const tmp = tok.relPos; tok.relPos = target.relPos; target.relPos = tmp;
+      pushLog(`🔄 Power tile! ${labelFor(color)} swapped places with ${labelFor(oppColor)}.`);
     }
-    tapScoreLine.textContent = 'Score — You: ' + tapScore.me + ' · Opponent: ' + tapScore.them;
-    tapBanner.classList.remove('celebrate');
-    if(tapScore.me>=5 || tapScore.them>=5){
-      const iWon = tapScore.me>=5;
-      tapBanner.textContent = iWon ? '🏆 YOU WIN THE DUEL!' : '🏆 ' + theirName + ' WINS THE DUEL!';
-      tapBanner.className = 'turn-banner turn-over celebrate';
-    } else {
-      tapBanner.textContent = 'First to 5 wins the duel ⚡';
-      tapBanner.className = 'turn-banner';
-    }
-  }
-
-  tapReadyBtn.addEventListener('click', () => {
-    if(tapScore.me>=5 || tapScore.them>=5) return;
-    tapReadyMe = true;
-    tapPhase = 'waiting';
-    tapReadyBtn.style.display='none';
-    if(conn && conn.open) conn.send({type:'tapReady'});
-    tapRender();
-    tapMaybeStart();
-  });
-
-  function tapMaybeStart(){
-    if(isHost && tapReadyMe && tapReadyThem && tapPhase==='waiting'){
-      const delay = 800 + Math.random()*3000;
-      if(conn && conn.open) conn.send({type:'tapGo', delay: delay});
-      tapBeginCountdown(delay);
-    }
-  }
-
-  function tapBeginCountdown(delay){
-    tapPhase = 'countdown';
-    tapRender();
-    setTimeout(() => {
-      if(tapPhase==='countdown'){
-        tapPhase = 'live';
-        tapStartTs = performance.now();
-        tapRender();
+  } else if(icon==='🛡️'){
+    tok.shielded = true;
+    pushLog(`🛡️ Power tile! ${labelFor(color)}'s token ${tok.id+1} is shielded.`);
+  } else if(icon==='⏪'){
+    const oppActive = state.tokens[oppColor].filter(t=>t.status==='active' && t.relPos<=50 && !t.shielded);
+    if(oppActive.length){
+      const target = oppActive.reduce((a,b)=> a.relPos>b.relPos?a:b); // furthest-along opponent token
+      const before = target.relPos;
+      target.relPos = Math.max(0, target.relPos-4);
+      if(target.relPos===before){
+        pushLog(`⏪ Power tile! ${labelFor(color)} tried to rewind ${labelFor(oppColor)}, but it was already at the start.`);
+      } else {
+        pushLog(`⏪ Power tile! ${labelFor(color)} knocked ${labelFor(oppColor)}'s token ${target.id+1} backward!`);
       }
-    }, delay);
-  }
-
-  tapArea.addEventListener('click', () => {
-    if(tapPhase==='countdown'){
-      tapPhase = 'falsestart';
-      tapMyResult = 'FALSE';
-      if(conn && conn.open) conn.send({type:'tapResult', falseStart:true});
-      tapRender();
-      setTimeout(() => { if(tapPhase==='falsestart'){ tapPhase='result'; tapRender(); tapMaybeFinish(); } }, 700);
-    } else if(tapPhase==='live'){
-      const reaction = Math.round(performance.now() - tapStartTs);
-      tapMyResult = reaction;
-      tapPhase = 'result';
-      if(conn && conn.open) conn.send({type:'tapResult', time: reaction, falseStart:false});
-      tapRender();
-      tapMaybeFinish();
-    }
-  });
-
-  function tapMaybeFinish(){
-    if(tapMyResult===null || tapTheirResult===null) return;
-    let iWonRound;
-    if(tapMyResult==='FALSE' && tapTheirResult==='FALSE'){ iWonRound = null; }
-    else if(tapMyResult==='FALSE'){ iWonRound = false; }
-    else if(tapTheirResult==='FALSE'){ iWonRound = true; }
-    else { iWonRound = tapMyResult < tapTheirResult; }
-
-    if(iWonRound===true){ tapScore.me++; addSystemMsg('You won that round! ⚡'); bumpOverall(true); }
-    else if(iWonRound===false){ tapScore.them++; addSystemMsg(theirName + ' won that round.'); bumpOverall(false); }
-    else { addSystemMsg('Double false start — redo!'); }
-
-    tapReadyBtn.style.display='none';
-    tapNextBtn.style.display='inline-block';
-    tapRender();
-  }
-
-  tapNextBtn.addEventListener('click', () => {
-    tapReset(); tapRender();
-    if(conn && conn.open) conn.send({type:'tapNext'});
-  });
-
-  const rpsBtns = document.querySelectorAll('.rps-btn');
-  const rpsResultEl = document.getElementById('rpsResult');
-  const rpsScoreLine = document.getElementById('rpsScoreLine');
-  const rpsBanner = document.getElementById('rpsBanner');
-  let rpsMyChoice = null, rpsTheirChoice = null;
-  let rpsScore = { me: 0, them: 0 };
-  const RPS_BEATS = { rock:'scissors', paper:'rock', scissors:'paper' };
-  const RPS_EMOJI = { rock:'✊', paper:'✋', scissors:'✌️' };
-
-  function rpsReset(){
-    rpsMyChoice = null; rpsTheirChoice = null;
-    rpsBtns.forEach(b => b.classList.remove('selected'));
-    rpsResultEl.textContent = '';
-  }
-  function rpsRender(){
-    rpsScoreLine.textContent = 'Score — You: ' + rpsScore.me + ' · Opponent: ' + rpsScore.them;
-    rpsBanner.classList.remove('celebrate');
-    if(rpsScore.me>=5 || rpsScore.them>=5){
-      rpsBanner.textContent = (rpsScore.me>=5 ? '🏆 YOU WIN THE DUEL!' : '🏆 ' + theirName + ' WINS THE DUEL!');
-      rpsBanner.className = 'turn-banner turn-over celebrate';
     } else {
-      rpsBanner.textContent = 'First to 5 wins the duel';
-      rpsBanner.className = 'turn-banner';
+      pushLog(`⏪ Power tile landed on, but ${labelFor(oppColor)} has no token to rewind.`);
     }
   }
-  rpsBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      if(rpsMyChoice || rpsScore.me>=5 || rpsScore.them>=5) return;
-      rpsMyChoice = btn.dataset.choice;
-      btn.classList.add('selected');
-      rpsResultEl.textContent = 'Waiting for opponent...';
-      if(conn && conn.open) conn.send({type:'rpsChoice', choice: rpsMyChoice});
-      rpsResolve();
-    });
-  });
-  function rpsResolve(){
-    if(!rpsMyChoice || !rpsTheirChoice) return;
-    let outcome;
-    if(rpsMyChoice===rpsTheirChoice) outcome='draw';
-    else outcome = (RPS_BEATS[rpsMyChoice]===rpsTheirChoice) ? 'win' : 'lose';
-    const mine = RPS_EMOJI[rpsMyChoice], theirs = RPS_EMOJI[rpsTheirChoice];
-    if(outcome==='draw'){ rpsResultEl.textContent = 'You ' + mine + ' vs ' + theirs + ' — draw!'; }
-    else if(outcome==='win'){ rpsScore.me++; rpsResultEl.textContent = 'You ' + mine + ' beats ' + theirs + ' — you win!'; bumpOverall(true); }
-    else { rpsScore.them++; rpsResultEl.textContent = 'You ' + mine + ' loses to ' + theirs + ' — they win!'; bumpOverall(false); }
-    rpsRender();
-    setTimeout(rpsReset, 2200);
-  }
+}
 
-  const guessSetterArea = document.getElementById('guessSetterArea');
-  const guessGuesserArea = document.getElementById('guessGuesserArea');
-  const guessSecretInput = document.getElementById('guessSecretInput');
-  const guessSetBtn = document.getElementById('guessSetBtn');
-  const guessTryInput = document.getElementById('guessTryInput');
-  const guessTryBtn = document.getElementById('guessTryBtn');
-  const guessFeedback = document.getElementById('guessFeedback');
-  const guessHistory = document.getElementById('guessHistory');
-  const guessScoreLine = document.getElementById('guessScoreLine');
-  const guessBanner = document.getElementById('guessBanner');
+function checkWin(color){
+  if(state.tokens[color].every(t=>t.status==='home')){
+    state.winner = color;
+    pushLog(`🏆 ${labelFor(color)} wins the game! 🏆`);
+  }
+}
 
-  let guessRoundOwner = 'red';
-  let guessSecret = null;
-  let guessAttempts = 0;
-  let guessScore = { red:0, yellow:0 };
+function passTurn(){
+  state.awaitingMove=false; state.dice=null;
+  state.turn = state.turn==='red'?'yellow':'red';
+  state.consecSix=0;
+  render(); broadcast();
+}
 
-  function guessInit(){
-    guessRoundOwner = 'red'; guessSecret = null; guessAttempts = 0;
-    guessScore = { red:0, yellow:0 };
-    guessFeedback.textContent = ''; guessHistory.textContent = '';
-    guessSecretInput.value = ''; guessTryInput.value = '';
-  }
-  function guessRenderRoles(){
-    const amSetter = guessRoundOwner === myColor;
-    guessSetterArea.style.display = amSetter ? 'block' : 'none';
-    guessGuesserArea.style.display = amSetter ? 'none' : 'block';
-    guessBanner.textContent = amSetter ? 'Set a secret number 1-100' : "Waiting for them to set a number...";
-    guessBanner.className = 'turn-banner ' + (amSetter ? 'turn-you' : 'turn-them');
-  }
-  function guessRenderScore(){
-    guessScoreLine.textContent = 'Rounds won — You: ' + (guessScore[myColor]||0) + ' · Opponent: ' + (guessScore[oppColor]||0);
-  }
-  function guessApplyFeedback(value, result, attempts){
-    let text;
-    if(result==='correct') text = 'Correct! It was ' + value + ' (' + attempts + ' guesses)';
-    else if(result==='higher') text = value + ' → go higher!';
-    else text = value + ' → go lower!';
-    guessFeedback.textContent = text;
-    guessHistory.textContent = 'Attempts this round: ' + attempts;
-  }
-  function guessColorOther(c){ return c==='red' ? 'yellow' : 'red'; }
+function labelFor(color){ return color==='red' ? (myColor==='red'?myName:theirName) : (myColor==='yellow'?myName:theirName); }
+function pushLog(t){ state.log.push(t); if(state.log.length>60) state.log.shift(); }
+function broadcast(){ send({type:'state', state}); }
 
-  guessSetBtn.addEventListener('click', () => {
-    const n = parseInt(guessSecretInput.value, 10);
-    if(!n || n<1 || n>100){ guessFeedback.textContent = 'Enter a number between 1 and 100.'; return; }
-    guessSecret = n; guessAttempts = 0;
-    guessSecretInput.value = '';
-    guessFeedback.textContent = 'Number set — waiting for their guesses...';
-    guessHistory.textContent = '';
-    guessBanner.textContent = 'They are guessing...';
-    if(conn && conn.open) conn.send({type:'guessStart'});
-  });
-  guessTryBtn.addEventListener('click', () => {
-    const n = parseInt(guessTryInput.value, 10);
-    if(!n || n<1 || n>100) return;
-    if(conn && conn.open) conn.send({type:'guessTry', value: n});
-    guessTryInput.value = '';
-  });
-  function guessHandleIncomingTry(value){
-    if(guessSecret===null || guessRoundOwner!==myColor) return;
-    guessAttempts++;
-    let result;
-    if(value===guessSecret) result='correct';
-    else if(value<guessSecret) result='higher';
-    else result='lower';
-    guessApplyFeedback(value, result, guessAttempts);
-    let newOwner = guessRoundOwner;
-    if(result==='correct'){
-      const guesserColor = guessColorOther(myColor);
-      guessScore[guesserColor] = (guessScore[guesserColor]||0) + 1;
-      guessRenderScore();
-      bumpOverall(false);
-      newOwner = guesserColor;
-    }
-    if(conn && conn.open){
-      conn.send({type:'guessFeedback', value:value, result:result, attempts:guessAttempts, scoreRed:guessScore.red, scoreYellow:guessScore.yellow, newOwner:newOwner});
-    }
-    if(result==='correct'){
-      guessRoundOwner = newOwner; guessSecret = null; guessAttempts = 0;
-      guessRenderRoles();
-    }
-  }
+/* ---------------- render ---------------- */
+function render(){
+  renderTokens();
+  document.getElementById('turnDot').className='dot '+state.turn+'-tok';
+  const turnName = state.turn===myColor ? 'Your turn' : (theirName+"'s turn");
+  document.getElementById('turnText').textContent = state.winner ? `${labelFor(state.winner)} wins! 🏆` : turnName;
+  diceBtn.disabled = state.turn!==myColor || state.awaitingMove || !!state.winner;
+  if(!state.awaitingMove && state.dice==null && state.turn===myColor) diceBtn.textContent='🎲';
+  document.getElementById('log').innerHTML = state.log.slice(-8).map(l=>`<div>${l}</div>`).join('');
+  document.getElementById('log').scrollTop = 999999;
+}
 
-  const WYR_PROMPTS = [
-    ["Vacation in the mountains","Vacation at the beach"],
-    ["Have unlimited money","Have unlimited free time"],
-    ["Always be 10 minutes late","Always be 20 minutes early"],
-    ["Give up spicy food","Give up sweet food"],
-    ["Live without music","Live without movies"],
-    ["Be famous","Be rich but unknown"],
-    ["Travel to the past","Travel to the future"],
-    ["Only text, never call","Only call, never text"],
-    ["Always be too hot","Always be too cold"],
-    ["Have super strength","Have super speed"],
-    ["Lose your phone for a week","Lose your wallet for a week"],
-    ["Only eat your favorite food forever","Never eat your favorite food again"],
-    ["Live in a big city","Live in the countryside"],
-    ["Be able to fly","Be invisible"],
-    ["Read minds","See the future"]
-  ];
-  const wyrPrompt = document.getElementById('wyrPrompt');
-  const wyrBtnA = document.getElementById('wyrBtnA');
-  const wyrBtnB = document.getElementById('wyrBtnB');
-  const wyrResult = document.getElementById('wyrResult');
-  const wyrScoreLine = document.getElementById('wyrScoreLine');
-  const wyrNextBtn = document.getElementById('wyrNextBtn');
-  let wyrIdx = -1, wyrMyPick = null, wyrTheirPick = null, wyrMatches = 0;
+/* ---------------- chat ---------------- */
+const chatMsgs=document.getElementById('chatMsgs');
+function addChatMsg(text, mine){
+  const wrap=document.createElement('div');
+  wrap.className='msg '+(mine?'me':'them');
 
-  function wyrReset(){
-    wyrIdx = -1; wyrMyPick = null; wyrTheirPick = null; wyrMatches = 0;
-    wyrPrompt.textContent = 'Click Next Question to start';
-    wyrBtnA.textContent = 'A'; wyrBtnB.textContent = 'B';
-    wyrBtnA.classList.remove('picked'); wyrBtnB.classList.remove('picked');
-    wyrResult.textContent = '';
-    wyrScoreLine.textContent = 'Matched — 0 times';
-  }
-  function wyrShowQuestion(idx){
-    wyrIdx = idx; wyrMyPick = null; wyrTheirPick = null;
-    wyrPrompt.textContent = 'Would you rather...';
-    wyrBtnA.textContent = 'A: ' + WYR_PROMPTS[idx][0];
-    wyrBtnB.textContent = 'B: ' + WYR_PROMPTS[idx][1];
-    wyrBtnA.classList.remove('picked'); wyrBtnB.classList.remove('picked');
-    wyrResult.textContent = '';
-  }
-  wyrNextBtn.addEventListener('click', () => {
-    const idx = Math.floor(Math.random()*WYR_PROMPTS.length);
-    wyrShowQuestion(idx);
-    if(conn && conn.open) conn.send({type:'wyrNewPrompt', idx: idx});
-  });
-  function wyrPick(choice){
-    if(wyrMyPick || wyrIdx===-1) return;
-    wyrMyPick = choice;
-    if(conn && conn.open) conn.send({type:'wyrPick', choice: choice});
-    wyrCheckReveal();
-  }
-  wyrBtnA.addEventListener('click', () => wyrPick('A'));
-  wyrBtnB.addEventListener('click', () => wyrPick('B'));
-  function wyrCheckReveal(){
-    if(!wyrMyPick || !wyrTheirPick) return;
-    wyrBtnA.classList.toggle('picked', wyrMyPick==='A');
-    wyrBtnB.classList.toggle('picked', wyrMyPick==='B');
-    if(wyrMyPick===wyrTheirPick){
-      wyrMatches++;
-      wyrResult.textContent = '🎉 You both picked ' + wyrMyPick + '! You matched.';
-    } else {
-      wyrResult.textContent = 'You picked ' + wyrMyPick + ', they picked ' + wyrTheirPick + '. No match this time.';
-    }
-    wyrScoreLine.textContent = 'Matched — ' + wyrMatches + ' times';
-  }
+  const label=document.createElement('div');
+  label.className='msg-name';
+  label.textContent = mine ? myName : theirName;
 
-  const memoryGrid = document.getElementById('memoryGrid');
-  const memoryScoreLine = document.getElementById('memoryScoreLine');
-  const memoryBanner = document.getElementById('memoryBanner');
-  const MEMORY_SYMBOLS = ['🍕','🎮','🎧','⚽','🎲','🌟','🍩','🚀'];
-  let memoryState = null;
+  const bubble=document.createElement('div');
+  bubble.textContent=text;
 
-  function memoryFreshDeck(){
-    let deck = [...MEMORY_SYMBOLS, ...MEMORY_SYMBOLS];
-    for(let i=deck.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      const tmp = deck[i]; deck[i]=deck[j]; deck[j]=tmp;
-    }
-    return deck;
+  wrap.appendChild(label);
+  wrap.appendChild(bubble);
+  chatMsgs.appendChild(wrap);
+  chatMsgs.scrollTop=999999;
+  if(!mine && document.getElementById('chatPanel').classList.contains('hidden')){
+    unread++; updateBadge();
   }
-  function memoryFreshState(){
-    return { deck: memoryFreshDeck(), matched: Array(16).fill(false), turn:'red', scoreRed:0, scoreYellow:0, flipped: [] };
-  }
-  function memorySend(){
-    if(conn && conn.open) conn.send({type:'memoryState', state: memoryState});
-  }
-  function memoryRender(){
-    if(!memoryState){
-      memoryGrid.innerHTML = '';
-      memoryBanner.textContent = 'Setting up board...';
-      memoryBanner.className = 'turn-banner';
-      return;
-    }
-    memoryGrid.innerHTML = '';
-    memoryState.deck.forEach((sym, i) => {
-      const card = document.createElement('div');
-      const shown = memoryState.matched[i] || memoryState.flipped.indexOf(i)!==-1;
-      card.className = 'memory-card' + (memoryState.matched[i] ? ' matched' : (shown ? ' flipped' : ''));
-      card.textContent = shown ? sym : '❓';
-      card.addEventListener('click', () => memoryClick(i));
-      memoryGrid.appendChild(card);
-    });
-    const myScoreKey = myColor==='red' ? 'scoreRed' : 'scoreYellow';
-    const theirScoreKey = oppColor==='red' ? 'scoreRed' : 'scoreYellow';
-    memoryScoreLine.textContent = 'Pairs — You: ' + (memoryState[myScoreKey]||0) + ' · Opponent: ' + (memoryState[theirScoreKey]||0);
-    const allMatched = memoryState.matched.every(m=>m);
-    memoryBanner.classList.remove('celebrate');
-    if(allMatched){
-      const myScore = memoryState[myScoreKey]||0, theirScore = memoryState[theirScoreKey]||0;
-      if(myScore===theirScore){ memoryBanner.textContent = "It's a tie!"; memoryBanner.className = 'turn-banner turn-over'; }
-      else { const iWon = myScore>theirScore; memoryBanner.textContent = (iWon ? '🏆 You win the board!' : '🏆 ' + theirName + ' wins the board!'); memoryBanner.className = 'turn-banner turn-over celebrate'; }
-    } else if(memoryState.turn===myColor){
-      memoryBanner.textContent = 'Your turn — flip two cards';
-      memoryBanner.className = 'turn-banner turn-you';
-    } else {
-      memoryBanner.textContent = theirName + "'s turn...";
-      memoryBanner.className = 'turn-banner turn-them';
-    }
-  }
-  function memoryClick(idx){
-    if(!memoryState) return;
-    if(memoryState.turn!==myColor) return;
-    if(memoryState.matched[idx]) return;
-    if(memoryState.flipped.indexOf(idx)!==-1) return;
-    if(memoryState.flipped.length>=2) return;
-    memoryState.flipped.push(idx);
-    memoryRender();
-    if(memoryState.flipped.length===2){
-      memorySend();
-      const a = memoryState.flipped[0], b = memoryState.flipped[1];
-      const isMatch = memoryState.deck[a]===memoryState.deck[b];
-      const actingColor = memoryState.turn;
-      setTimeout(() => {
-        const wasComplete = memoryState.matched.every(m=>m);
-        if(isMatch){
-          memoryState.matched[a]=true; memoryState.matched[b]=true;
-          const key = actingColor==='red' ? 'scoreRed' : 'scoreYellow';
-          memoryState[key] = (memoryState[key]||0) + 1;
-        } else {
-          memoryState.turn = actingColor==='red' ? 'yellow' : 'red';
-        }
-        memoryState.flipped = [];
-        memoryRender();
-        memorySend();
-        const nowComplete = memoryState.matched.every(m=>m);
-        if(nowComplete && !wasComplete && memoryState.scoreRed!==memoryState.scoreYellow){
-          const winnerColor = memoryState.scoreRed>memoryState.scoreYellow ? 'red' : 'yellow';
-          bumpOverall(winnerColor===myColor);
-        }
-      }, 900);
-    } else {
-      memorySend();
-    }
-  }
-  document.getElementById('memoryRematchBtn').addEventListener('click', () => {
-    memoryState = memoryFreshState();
-    memoryRender();
-    memorySend();
-  });
+}
+function addSysMsg(text){
+  const d=document.createElement('div'); d.className='msg sys'; d.textContent=text;
+  chatMsgs.appendChild(d); chatMsgs.scrollTop=999999;
+}
+document.getElementById('chatSend').onclick = sendChat;
+document.getElementById('chatInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendChat(); });
+function sendChat(){
+  const inp=document.getElementById('chatInput');
+  const text=inp.value.trim();
+  if(!text) return;
+  addChatMsg(text, true);
+  send({type:'chat', text});
+  inp.value='';
+}
 
-  const drawCanvas = document.getElementById('drawCanvas');
-  const drawCtx = drawCanvas.getContext('2d');
-  const drawToolbar = document.getElementById('drawToolbar');
-  const drawNewWordBtn = document.getElementById('drawNewWordBtn');
-  const drawClearBtn = document.getElementById('drawClearBtn');
-  const drawSecretWordEl = document.getElementById('drawSecretWord');
-  const drawGuessHint = document.getElementById('drawGuessHint');
-  const drawScoreLine = document.getElementById('drawScoreLine');
-  const drawBanner = document.getElementById('drawBanner');
+/* ---------------- minimize chat ---------------- */
+const chatPanel=document.getElementById('chatPanel');
+const chatBubble=document.getElementById('chatBubble');
+const chatBadge=document.getElementById('chatBadge');
+document.getElementById('minimizeChat').onclick = ()=>{
+  chatPanel.classList.add('hidden');
+  chatBubble.classList.remove('hidden');
+};
+chatBubble.onclick = ()=>{
+  chatPanel.classList.remove('hidden');
+  chatBubble.classList.add('hidden');
+  unread=0; updateBadge();
+};
+function updateBadge(){
+  if(unread>0){ chatBadge.textContent=unread; chatBadge.classList.remove('hidden'); }
+  else chatBadge.classList.add('hidden');
+}
 
-  const DRAW_WORDS = ['pizza','guitar','elephant','rainbow','castle','robot','banana','umbrella','dragon','bicycle','snowman','rocket','octopus','sandwich','volcano','penguin','cactus','ladder','butterfly','anchor','pirate','waterfall','skateboard','telescope','jellyfish','campfire','lighthouse','dinosaur','helicopter','mountain'];
-
-  let drawOwner = 'red';
-  let drawWord = null;
-  let drawWordLength = 0;
-  let drawGuessed = true;
-  let drawScore = { red:0, yellow:0 };
-  let drawDrawing = false;
-  let drawLastPoint = null;
-
-  function drawInit(){
-    drawOwner = 'red';
-    drawWord = null;
-    drawWordLength = 0;
-    drawGuessed = true;
-    drawScore = { red:0, yellow:0 };
-    drawClearCanvas();
-    drawRender();
-  }
-
-  function drawClearCanvas(){
-    drawCtx.clearRect(0,0,drawCanvas.width, drawCanvas.height);
-    drawCtx.fillStyle = '#fdfdfd';
-    drawCtx.fillRect(0,0,drawCanvas.width, drawCanvas.height);
-  }
-
-  function drawIsDrawer(){ return drawOwner === myColor; }
-
-  function drawGetPos(e){
-    const rect = drawCanvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return {
-      x: (clientX - rect.left) * (drawCanvas.width / rect.width),
-      y: (clientY - rect.top) * (drawCanvas.height / rect.height)
-    };
-  }
-
-  function drawLineSegment(ctx, x1,y1,x2,y2){
-    ctx.strokeStyle = '#1e1b4b';
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
-    ctx.stroke();
-  }
-
-  function drawPointerDown(e){
-    if(!drawIsDrawer() || drawGuessed) return;
-    e.preventDefault();
-    drawDrawing = true;
-    drawLastPoint = drawGetPos(e);
-  }
-  function drawPointerMove(e){
-    if(!drawDrawing || !drawIsDrawer() || drawGuessed) return;
-    e.preventDefault();
-    const p = drawGetPos(e);
-    drawLineSegment(drawCtx, drawLastPoint.x, drawLastPoint.y, p.x, p.y);
-    if(conn && conn.open) conn.send({type:'drawStroke', x1:drawLastPoint.x, y1:drawLastPoint.y, x2:p.x, y2:p.y});
-    drawLastPoint = p;
-  }
-  function drawPointerUp(){ drawDrawing = false; drawLastPoint = null; }
-
-  drawCanvas.addEventListener('mousedown', drawPointerDown);
-  drawCanvas.addEventListener('mousemove', drawPointerMove);
-  window.addEventListener('mouseup', drawPointerUp);
-  drawCanvas.addEventListener('touchstart', drawPointerDown, {passive:false});
-  drawCanvas.addEventListener('touchmove', drawPointerMove, {passive:false});
-  drawCanvas.addEventListener('touchend', drawPointerUp);
-
-  drawNewWordBtn.addEventListener('click', () => {
-    if(!drawIsDrawer()) return;
-    drawWord = DRAW_WORDS[Math.floor(Math.random()*DRAW_WORDS.length)];
-    drawWordLength = drawWord.length;
-    drawGuessed = false;
-    drawClearCanvas();
-    if(conn && conn.open) conn.send({type:'drawNewRound', wordLength: drawWordLength});
-    addSystemMsg('New drawing round started — guess in chat!');
-    drawRender();
-  });
-
-  drawClearBtn.addEventListener('click', () => {
-    if(!drawIsDrawer()) return;
-    drawClearCanvas();
-    if(conn && conn.open) conn.send({type:'drawClear'});
-  });
-
-  function drawCheckGuess(text){
-    if(!drawIsDrawer() || !drawWord || drawGuessed) return;
-    if(text.trim().toLowerCase() === drawWord.toLowerCase()){
-      const winner = oppColor;
-      const winnerKey = winner === 'red' ? 'red' : 'yellow';
-      drawScore[winnerKey] = (drawScore[winnerKey]||0) + 1;
-      drawGuessed = true;
-      drawOwner = winner;
-      bumpOverall(false);
-      if(conn && conn.open) conn.send({type:'drawCorrect', word: drawWord, scoreRed: drawScore.red, scoreYellow: drawScore.yellow, newDrawer: winner});
-      addSystemMsg(theirName + ' guessed it! The word was "' + drawWord + '"');
-      drawRender();
-    }
-  }
-
-  function drawRender(){
-    const amDrawer = drawIsDrawer();
-    drawToolbar.style.display = amDrawer ? 'flex' : 'none';
-    drawCanvas.style.cursor = (amDrawer && !drawGuessed) ? 'crosshair' : 'default';
-    if(amDrawer && drawWord){
-      drawSecretWordEl.textContent = 'Draw: ' + drawWord.toUpperCase();
-    } else {
-      drawSecretWordEl.textContent = '';
-    }
-    if(!amDrawer && drawWordLength && !drawGuessed){
-      drawGuessHint.textContent = Array(drawWordLength).fill('_').join(' ');
-    } else if(drawGuessed && drawWord){
-      drawGuessHint.textContent = drawWord.toUpperCase();
-    } else {
-      drawGuessHint.textContent = '';
-    }
-    const myKey = myColor === 'red' ? 'red' : 'yellow';
-    const oppKey = oppColor === 'red' ? 'red' : 'yellow';
-    drawScoreLine.textContent = 'Words guessed — You: ' + (drawScore[myKey]||0) + ' · Opponent: ' + (drawScore[oppKey]||0);
-    drawBanner.classList.remove('celebrate');
-    if(amDrawer){
-      drawBanner.textContent = drawGuessed ? "You're up — click New Word to start drawing!" : 'You are drawing — they are guessing in chat';
-      drawBanner.className = 'turn-banner turn-you';
-    } else {
-      drawBanner.textContent = drawGuessed ? 'Waiting for ' + theirName + ' to start a new round...' : theirName + ' is drawing — guess in chat!';
-      drawBanner.className = 'turn-banner turn-them';
-    }
-  }
-
-  // ---------- Truth Meter ----------
-  const truthSharerArea = document.getElementById('truthSharerArea');
-  const truthGuesserArea = document.getElementById('truthGuesserArea');
-  const truthStatementInput = document.getElementById('truthStatementInput');
-  const truthMarkTrueBtn = document.getElementById('truthMarkTrueBtn');
-  const truthMarkFalseBtn = document.getElementById('truthMarkFalseBtn');
-  const truthSubmitBtn = document.getElementById('truthSubmitBtn');
-  const truthStatementDisplay = document.getElementById('truthStatementDisplay');
-  const truthGuessTrueBtn = document.getElementById('truthGuessTrueBtn');
-  const truthGuessFalseBtn = document.getElementById('truthGuessFalseBtn');
-  const truthResultEl = document.getElementById('truthResult');
-  const truthScoreLine = document.getElementById('truthScoreLine');
-  const truthBanner = document.getElementById('truthBanner');
-
-  let truthOwner = 'red';
-  let truthMarkedActual = null;
-  let truthPendingText = '';
-  let truthCurrentActual = null;
-  let truthAwaitingGuess = false;
-  let truthScore = { red:0, yellow:0 };
-
-  function truthInit(){
-    truthOwner = 'red';
-    truthMarkedActual = null;
-    truthPendingText = '';
-    truthCurrentActual = null;
-    truthAwaitingGuess = false;
-    truthScore = { red:0, yellow:0 };
-    truthStatementInput.value = '';
-    truthResultEl.textContent = '';
-    truthMarkTrueBtn.classList.remove('selected');
-    truthMarkFalseBtn.classList.remove('selected');
-    truthGuessTrueBtn.disabled = false; truthGuessFalseBtn.disabled = false;
-    truthRender();
-  }
-  function truthIsSharer(){ return truthOwner === myColor; }
-  function truthUpdateSubmitState(){
-    truthSubmitBtn.disabled = !(truthStatementInput.value.trim() && truthMarkedActual !== null);
-  }
-  truthStatementInput.addEventListener('input', truthUpdateSubmitState);
-  truthMarkTrueBtn.addEventListener('click', () => { truthMarkedActual = true; truthMarkTrueBtn.classList.add('selected'); truthMarkFalseBtn.classList.remove('selected'); truthUpdateSubmitState(); });
-  truthMarkFalseBtn.addEventListener('click', () => { truthMarkedActual = false; truthMarkFalseBtn.classList.add('selected'); truthMarkTrueBtn.classList.remove('selected'); truthUpdateSubmitState(); });
-
-  truthSubmitBtn.addEventListener('click', () => {
-    if(!truthIsSharer()) return;
-    const text = truthStatementInput.value.trim();
-    if(!text || truthMarkedActual===null) return;
-    truthCurrentActual = truthMarkedActual;
-    truthAwaitingGuess = true;
-    if(conn && conn.open) conn.send({type:'truthStatement', text: text});
-    truthResultEl.textContent = 'Waiting for their guess...';
-    truthRender();
-  });
-
-  truthGuessTrueBtn.addEventListener('click', () => truthSubmitGuess(true));
-  truthGuessFalseBtn.addEventListener('click', () => truthSubmitGuess(false));
-  function truthSubmitGuess(guess){
-    if(truthIsSharer() || !truthPendingText) return;
-    if(conn && conn.open) conn.send({type:'truthGuess', guess: guess});
-    truthResultEl.textContent = 'Answer sent — waiting for reveal...';
-    truthGuessTrueBtn.disabled = true; truthGuessFalseBtn.disabled = true;
-  }
-  function truthHandleStatement(text){
-    truthPendingText = text;
-    truthStatementDisplay.textContent = text;
-    truthGuessTrueBtn.disabled = false; truthGuessFalseBtn.disabled = false;
-    truthResultEl.textContent = '';
-    truthRender();
-  }
-  function truthHandleGuess(guess){
-    if(!truthIsSharer() || !truthAwaitingGuess) return;
-    const correct = (guess === truthCurrentActual);
-    const winner = correct ? oppColor : myColor;
-    const winnerKey = winner === 'red' ? 'red' : 'yellow';
-    truthScore[winnerKey] = (truthScore[winnerKey]||0) + 1;
-    truthAwaitingGuess = false;
-    const newOwner = oppColor;
-    if(conn && conn.open) conn.send({type:'truthReveal', actual: truthCurrentActual, correct: correct, scoreRed: truthScore.red, scoreYellow: truthScore.yellow, newOwner: newOwner});
-    bumpOverall(winner === myColor);
-    truthResultEl.textContent = 'It was ' + (truthCurrentActual ? 'TRUE' : 'FALSE') + ' — ' + (correct ? theirName + ' guessed right!' : theirName + ' was fooled!');
-    truthOwner = newOwner;
-    truthPendingText = '';
-    truthStatementInput.value = '';
-    truthMarkedActual = null;
-    truthMarkTrueBtn.classList.remove('selected'); truthMarkFalseBtn.classList.remove('selected');
-    truthRender();
-  }
-  function truthApplyReveal(data){
-    truthScore.red = data.scoreRed; truthScore.yellow = data.scoreYellow;
-    truthResultEl.textContent = 'It was ' + (data.actual ? 'TRUE' : 'FALSE') + ' — ' + (data.correct ? 'You guessed right! 🎉' : 'You got fooled!');
-    truthOwner = data.newOwner;
-    truthPendingText = '';
-    truthGuessTrueBtn.disabled = false; truthGuessFalseBtn.disabled = false;
-    bumpOverall(data.correct);
-    truthRender();
-  }
-  function truthRender(){
-    const amSharer = truthIsSharer();
-    truthSharerArea.style.display = amSharer ? 'block' : 'none';
-    truthGuesserArea.style.display = amSharer ? 'none' : 'block';
-    if(!amSharer){
-      truthStatementDisplay.textContent = truthPendingText || 'Waiting for a statement...';
-    }
-    const myKey = myColor==='red'?'red':'yellow', oppKey = oppColor==='red'?'red':'yellow';
-    truthScoreLine.textContent = 'Score — You: ' + (truthScore[myKey]||0) + ' · Opponent: ' + (truthScore[oppKey]||0);
-    truthBanner.classList.remove('celebrate');
-    if(amSharer){
-      truthBanner.textContent = truthAwaitingGuess ? 'Waiting for their guess...' : "Write a statement and mark if it's true or false";
-      truthBanner.className = 'turn-banner turn-you';
-    } else {
-      truthBanner.textContent = truthPendingText ? 'Guess: true or false?' : 'Waiting for ' + theirName + ' to write a statement...';
-      truthBanner.className = 'turn-banner turn-them';
-    }
-  }
-
-  // ---------- Number Duel (Nim) ----------
-  const nimPileEl = document.getElementById('nimPileEl');
-  const nimTake1Btn = document.getElementById('nimTake1Btn');
-  const nimTake2Btn = document.getElementById('nimTake2Btn');
-  const nimTake3Btn = document.getElementById('nimTake3Btn');
-  const nimScoreLine = document.getElementById('nimScoreLine');
-  const nimBanner = document.getElementById('nimBanner');
-
-  const NIM_START = 21;
-  let nimPile = NIM_START;
-  let nimTurn = 'red';
-  let nimOver = false;
-  let nimScore = { red:0, yellow:0 };
-
-  function nimInit(){
-    nimPile = NIM_START; nimTurn = 'red'; nimOver = false;
-    nimRender();
-  }
-  function nimApplyMove(n, isMine){
-    if(nimOver) return;
-    nimPile = Math.max(0, nimPile - n);
-    if(isMine && conn && conn.open) conn.send({type:'nimMove', n: n});
-    if(nimPile === 0){
-      nimOver = true;
-      const winnerColor = nimTurn;
-      const winnerKey = winnerColor==='red'?'red':'yellow';
-      nimScore[winnerKey] = (nimScore[winnerKey]||0) + 1;
-      bumpOverall(winnerColor === myColor);
-      addSystemMsg((winnerColor===myColor?'You':theirName) + ' took the last token and won the round!');
-    } else {
-      nimTurn = nimTurn === 'red' ? 'yellow' : 'red';
-    }
-    nimRender();
-  }
-  [nimTake1Btn,nimTake2Btn,nimTake3Btn].forEach((btn, i) => {
-    btn.addEventListener('click', () => {
-      const n = i+1;
-      if(nimOver || nimTurn !== myColor || n > nimPile) return;
-      nimApplyMove(n, true);
-    });
-  });
-  document.getElementById('nimRematchBtn').addEventListener('click', () => {
-    nimInit();
-    if(conn && conn.open) conn.send({type:'nimRematch'});
-    addSystemMsg('New pile started.');
-  });
-  function nimRender(){
-    nimPileEl.innerHTML = '';
-    for(let i=0;i<nimPile;i++){
-      const tok = document.createElement('div');
-      tok.className = 'nim-token';
-      nimPileEl.appendChild(tok);
-    }
-    const myKey = myColor==='red'?'red':'yellow', oppKey = oppColor==='red'?'red':'yellow';
-    nimScoreLine.textContent = 'Wins — You: ' + (nimScore[myKey]||0) + ' · Opponent: ' + (nimScore[oppKey]||0);
-    const canPlay = !nimOver && nimTurn===myColor;
-    nimTake1Btn.disabled = !canPlay || nimPile<1;
-    nimTake2Btn.disabled = !canPlay || nimPile<2;
-    nimTake3Btn.disabled = !canPlay || nimPile<3;
-    nimBanner.classList.remove('celebrate');
-    if(nimOver){
-      nimBanner.textContent = 'Round over — click New Pile to play again';
-      nimBanner.className = 'turn-banner turn-over';
-    } else if(nimTurn===myColor){
-      nimBanner.textContent = 'Your turn — take 1, 2 or 3 (pile: ' + nimPile + ')';
-      nimBanner.className = 'turn-banner turn-you';
-    } else {
-      nimBanner.textContent = theirName + "'s turn... (pile: " + nimPile + ')';
-      nimBanner.className = 'turn-banner turn-them';
-    }
-  }
-
-  // ---------- Countdown Math ----------
-  const mathTargetEl = document.getElementById('mathTargetEl');
-  const mathInput = document.getElementById('mathInput');
-  const mathSubmitBtn = document.getElementById('mathSubmitBtn');
-  const mathFeedback = document.getElementById('mathFeedback');
-  const mathScoreLine = document.getElementById('mathScoreLine');
-  const mathBanner = document.getElementById('mathBanner');
-  const mathNewRoundBtn = document.getElementById('mathNewRoundBtn');
-
-  let mathTarget = null;
-  let mathOver = true;
-  let mathScore = { red:0, yellow:0 };
-
-  function mathInit(){
-    mathTarget = null; mathOver = true; mathScore = { red:0, yellow:0 };
-    mathInput.value = ''; mathFeedback.textContent = '';
-    mathRender();
-  }
-  mathNewRoundBtn.addEventListener('click', () => {
-    const target = 10 + Math.floor(Math.random()*90);
-    mathTarget = target; mathOver = false;
-    mathInput.value = ''; mathFeedback.textContent = '';
-    if(conn && conn.open) conn.send({type:'mathNewRound', target: target});
-    mathRender();
-  });
-  function mathEval(expr){
-    if(!/^[0-9+\-*/(). ]+$/.test(expr)) return null;
-    try {
-      const result = Function('"use strict"; return (' + expr + ')')();
-      return (typeof result === 'number' && isFinite(result)) ? result : null;
-    } catch(e){ return null; }
-  }
-  mathSubmitBtn.addEventListener('click', mathTrySubmit);
-  mathInput.addEventListener('keydown', (e) => { if(e.key==='Enter') mathTrySubmit(); });
-  function mathTrySubmit(){
-    if(mathOver || mathTarget===null) return;
-    const expr = mathInput.value.trim();
-    if(!expr) return;
-    const result = mathEval(expr);
-    if(result === null){ mathFeedback.textContent = 'Not a valid expression.'; return; }
-    if(Math.abs(result - mathTarget) < 0.0001){
-      mathOver = true;
-      const winnerKey = myColor==='red'?'red':'yellow';
-      mathScore[winnerKey] = (mathScore[winnerKey]||0) + 1;
-      bumpOverall(true);
-      if(conn && conn.open) conn.send({type:'mathWin', expr: expr, scoreRed: mathScore.red, scoreYellow: mathScore.yellow, winner: myColor});
-      addSystemMsg('You solved it! ' + expr + ' = ' + mathTarget);
-      mathRender();
-    } else {
-      mathFeedback.textContent = expr + ' = ' + result + ' — not quite, try again.';
-    }
-  }
-  function mathRender(){
-    mathTargetEl.textContent = mathTarget===null ? '—' : mathTarget;
-    mathInput.disabled = mathOver || mathTarget===null;
-    mathSubmitBtn.disabled = mathOver || mathTarget===null;
-    const myKey = myColor==='red'?'red':'yellow', oppKey = oppColor==='red'?'red':'yellow';
-    mathScoreLine.textContent = 'Wins — You: ' + (mathScore[myKey]||0) + ' · Opponent: ' + (mathScore[oppKey]||0);
-    mathBanner.classList.remove('celebrate');
-    if(mathTarget===null){
-      mathBanner.textContent = 'Click New Target to start';
-      mathBanner.className = 'turn-banner';
-    } else if(mathOver){
-      mathBanner.textContent = 'Round over — click New Target for the next one';
-      mathBanner.className = 'turn-banner turn-over';
-    } else {
-      mathBanner.textContent = 'Race to hit the target! ⚡';
-      mathBanner.className = 'turn-banner turn-you';
-    }
-  }
-
-  // ---------- Color Match ----------
-  const colorTrialEl = document.getElementById('colorTrialEl');
-  const colorMatchBtn = document.getElementById('colorMatchBtn');
-  const colorNoMatchBtn = document.getElementById('colorNoMatchBtn');
-  const colorReadyBtn = document.getElementById('colorReadyBtn');
-  const colorScoreLine = document.getElementById('colorScoreLine');
-  const colorBanner = document.getElementById('colorBanner');
-
-  const COLOR_NAMES = ['RED','BLUE','GREEN','YELLOW','PURPLE','ORANGE'];
-  const COLOR_HEX = { RED:'#ef4444', BLUE:'#3b82f6', GREEN:'#22c55e', YELLOW:'#eab308', PURPLE:'#a855f7', ORANGE:'#f97316' };
-
-  let colorReadyMe = false, colorReadyThem = false;
-  let colorPhase = 'idle';
-  let colorTrial = null;
-  let colorStartTs = 0;
-  let colorMyCorrect = null, colorMyTime = null;
-  let colorTheirCorrect = null, colorTheirTime = null;
-  let colorScore = { red:0, yellow:0 };
-
-  function colorInit(){
-    colorReadyMe=false; colorReadyThem=false; colorPhase='idle'; colorTrial=null;
-    colorMyCorrect=null; colorMyTime=null; colorTheirCorrect=null; colorTheirTime=null;
-    colorScore = { red:0, yellow:0 };
-    colorReadyBtn.style.display = 'inline-block';
-    colorRender();
-  }
-  colorReadyBtn.addEventListener('click', () => {
-    if(colorScore.red>=5 || colorScore.yellow>=5) return;
-    colorReadyMe = true;
-    colorPhase = 'waiting';
-    colorReadyBtn.style.display = 'none';
-    if(conn && conn.open) conn.send({type:'colorReady'});
-    colorRender();
-    colorMaybeStart();
-  });
-  function colorMaybeStart(){
-    if(isHost && colorReadyMe && colorReadyThem && colorPhase==='waiting'){
-      const word = COLOR_NAMES[Math.floor(Math.random()*COLOR_NAMES.length)];
-      const isMatch = Math.random() < 0.5;
-      let colorKey = word;
-      if(!isMatch){
-        const others = COLOR_NAMES.filter(c => c!==word);
-        colorKey = others[Math.floor(Math.random()*others.length)];
-      }
-      const trial = { word: word, colorKey: colorKey, isMatch: isMatch };
-      if(conn && conn.open) conn.send({type:'colorGo', trial: trial});
-      colorStartTrial(trial);
-    }
-  }
-  function colorStartTrial(trial){
-    colorTrial = trial;
-    colorPhase = 'live';
-    colorStartTs = performance.now();
-    colorMyCorrect = null; colorMyTime = null; colorTheirCorrect = null; colorTheirTime = null;
-    colorRender();
-  }
-  function colorAnswer(saysMatch){
-    if(colorPhase!=='live' || colorMyCorrect!==null) return;
-    const correct = (saysMatch === colorTrial.isMatch);
-    colorMyCorrect = correct;
-    colorMyTime = Math.round(performance.now() - colorStartTs);
-    if(conn && conn.open) conn.send({type:'colorResult', correct: correct, time: colorMyTime});
-    colorPhase = 'result';
-    colorRender();
-    colorMaybeFinish();
-  }
-  colorMatchBtn.addEventListener('click', () => colorAnswer(true));
-  colorNoMatchBtn.addEventListener('click', () => colorAnswer(false));
-  function colorMaybeFinish(){
-    if(colorMyCorrect===null || colorTheirCorrect===null) return;
-    let iWon = null;
-    if(colorMyCorrect && colorTheirCorrect) iWon = colorMyTime <= colorTheirTime;
-    else if(colorMyCorrect) iWon = true;
-    else if(colorTheirCorrect) iWon = false;
-    if(iWon===true){ colorScore[myColor]=(colorScore[myColor]||0)+1; addSystemMsg('You got it first! 🌈'); bumpOverall(true); }
-    else if(iWon===false){ colorScore[oppColor]=(colorScore[oppColor]||0)+1; addSystemMsg(theirName + ' got it first.'); bumpOverall(false); }
-    else { addSystemMsg('Both missed that one!'); }
-    colorReadyBtn.style.display = 'inline-block';
-    colorReadyMe = false; colorReadyThem = false; colorPhase='idle'; colorTrial=null;
-    colorRender();
-  }
-  function colorRender(){
-    colorScoreLine.textContent = 'Score — You: ' + (colorScore[myColor]||0) + ' · Opponent: ' + (colorScore[oppColor]||0);
-    colorMatchBtn.disabled = colorPhase!=='live';
-    colorNoMatchBtn.disabled = colorPhase!=='live';
-    if(colorPhase==='idle'){
-      colorTrialEl.textContent = 'Click "I\'m Ready" to begin';
-      colorTrialEl.style.color = 'var(--text)';
-    } else if(colorPhase==='waiting'){
-      colorTrialEl.textContent = 'Waiting for opponent to ready up...';
-      colorTrialEl.style.color = 'var(--text)';
-    } else if(colorTrial){
-      colorTrialEl.textContent = colorTrial.word;
-      colorTrialEl.style.color = COLOR_HEX[colorTrial.colorKey];
-    }
-    colorBanner.classList.remove('celebrate');
-    if(colorScore.red>=5 || colorScore.yellow>=5){
-      const iWonMatch = (colorScore[myColor]||0) >= 5;
-      colorBanner.textContent = iWonMatch ? '🏆 YOU WIN THE DUEL!' : '🏆 ' + theirName + ' WINS THE DUEL!';
-      colorBanner.className = 'turn-banner turn-over celebrate';
-    } else {
-      colorBanner.textContent = 'First to 5 wins the duel 🌈';
-      colorBanner.className = 'turn-banner';
-    }
-  }
-
-  function addMsg(text, who){
-    const div = document.createElement('div');
-    div.className = 'msg ' + who;
-    div.textContent = text;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
-  function addSystemMsg(text){
-    const div = document.createElement('div');
-    div.className = 'msg system';
-    div.textContent = text;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
-
-  function sendChat(){
-    const text = chatInput.value.trim();
-    if(!text) return;
-    addMsg(text, 'me');
-    if(conn && conn.open) conn.send({ type: 'chat', text: text });
-    chatInput.value = '';
-  }
-  sendChatBtn.addEventListener('click', sendChat);
-  chatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') sendChat(); });
-  let lastTypingSent = 0;
-  chatInput.addEventListener('input', () => {
-    const now = Date.now();
-    if(now - lastTypingSent > 1200){
-      lastTypingSent = now;
-      if(conn && conn.open) conn.send({type:'typing'});
-    }
-  });
-
-})();
+render();
 </script>
-
 </body>
 </html>
