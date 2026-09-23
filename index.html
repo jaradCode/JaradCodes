@@ -535,33 +535,10 @@
 
 <div id="lobby">
   <div class="lobby-section">
-    <h3>① Enter your name</h3>
-    <input type="text" id="nameInput" placeholder="Your name" maxlength="16">
+    <h3>Just open this page at the same time as them</h3>
+    <p class="help-text">No codes, no links to send — you'll both drop into the same game automatically.</p>
   </div>
-
-  <hr class="sep">
-
-  <div class="lobby-section">
-    <h3>② Start a new game</h3>
-    <button class="btn-primary" id="createBtn">Create Game</button>
-    <div id="shareArea" style="display:none;">
-      <div class="share-box">
-        <input type="text" id="roomCode" readonly>
-        <button class="copy-btn" id="copyBtn">Copy Link</button>
-      </div>
-      <div class="status-line">Send this link over and wait for them to join.</div>
-    </div>
-  </div>
-
-  <hr class="sep">
-
-  <div class="lobby-section">
-    <h3>③ ...or join</h3>
-    <input type="text" id="joinInput" placeholder="Paste game code here">
-    <button class="btn-secondary" id="joinBtn">Join Game</button>
-  </div>
-
-  <div class="status-line" id="lobbyStatus"></div>
+  <div class="status-line" id="lobbyStatus">Connecting...</div>
 </div>
 
 <div id="game">
@@ -819,29 +796,13 @@
 
   const lobby = document.getElementById('lobby');
   const gameEl = document.getElementById('game');
-  const nameInput = document.getElementById('nameInput');
-  const createBtn = document.getElementById('createBtn');
-  const joinBtn = document.getElementById('joinBtn');
-  const joinInput = document.getElementById('joinInput');
-  const shareArea = document.getElementById('shareArea');
-  const roomCode = document.getElementById('roomCode');
-  const copyBtn = document.getElementById('copyBtn');
   const lobbyStatus = document.getElementById('lobbyStatus');
   const messagesEl = document.getElementById('messages');
   const chatInput = document.getElementById('chatInput');
   const sendChatBtn = document.getElementById('sendChatBtn');
 
-  function makeId(len){
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let out = '';
-    for(let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
-    return out;
-  }
-
   function setLobbyStatus(text){ lobbyStatus.textContent = text; }
-
-  const savedName = localStorage.getItem('jcf_name');
-  if(savedName){ nameInput.value = savedName; }
+  myName = 'Player' + (1 + Math.floor(Math.random()*98));
 
   const themeToggle = document.getElementById('themeToggle');
   const savedTheme = localStorage.getItem('jcf_theme');
@@ -904,20 +865,6 @@
   };
 
   let connectionTimer = null;
-  let joinRetriesLeft = 0;
-  let lastJoinCode = '';
-
-  function normalizeRoomCode(value){
-    let code = String(value || '').trim();
-    if(!code) return '';
-    try {
-      if(code.indexOf('://') !== -1) {
-        const u = new URL(code);
-        code = u.searchParams.get('join') || code;
-      }
-    } catch(e) {}
-    return code.trim();
-  }
 
   function clearConnectionTimer(){
     if(connectionTimer){
@@ -926,95 +873,56 @@
     }
   }
 
+  const ROOM_ID = 'jcodesfun-room-v1';
+
   function failConnection(message){
     clearConnectionTimer();
     setLobbyStatus(message);
-    createBtn.disabled = false;
-    joinBtn.disabled = false;
+    setTimeout(startAutoConnect, 2000);
   }
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const autoJoin = urlParams.get('join');
-  if(autoJoin){ joinInput.value = autoJoin; }
-
-  createBtn.addEventListener('click', () => {
-    myName = nameInput.value.trim() || 'Player 1';
-    localStorage.setItem('jcf_name', myName);
+  function startAutoConnect(){
+    setLobbyStatus('Connecting...');
     isHost = true;
     myColor = 'red'; oppColor = 'yellow';
-    createBtn.disabled = true;
-    setLobbyStatus('Setting up your game...');
-    const id = 'c4-' + makeId(6);
-    peer = new Peer(id, PEER_OPTIONS);
+    peer = new Peer(ROOM_ID, PEER_OPTIONS);
 
-    peer.on('open', (id) => {
-      const url = window.location.origin + window.location.pathname + '?join=' + id;
-      roomCode.value = id;
-      shareArea.style.display = 'block';
-      setLobbyStatus('Waiting for them to join...');
-      copyBtn.onclick = () => {
-        navigator.clipboard.writeText(url).then(()=>{
-          copyBtn.textContent = 'Copied!';
-          setTimeout(()=>copyBtn.textContent='Copy Link', 1500);
-        });
-      };
+    peer.on('open', () => {
+      setLobbyStatus('Waiting for opponent to open the page...');
     });
 
     peer.on('connection', (c) => {
-      if(conn && conn.open) {
-        c.close();
-        return;
-      }
+      if(conn && conn.open) { c.close(); return; }
       conn = c;
       setupConnection();
     });
 
     peer.on('disconnected', () => {
-      setLobbyStatus('Connection server disconnected. Reconnecting...');
       try { peer.reconnect(); } catch(e) {}
     });
 
     peer.on('error', (err) => {
-      failConnection('Connection error: ' + (err.type || 'unknown') + '. Try creating a new game.');
+      if(err && err.type === 'unavailable-id'){
+        // Someone already opened the room — join them instead.
+        joinAsGuest();
+      } else {
+        failConnection('Connection hiccup, retrying...');
+      }
     });
-  });
+  }
 
-  joinBtn.addEventListener('click', () => {
-    const code = normalizeRoomCode(joinInput.value);
-    if(!code){ setLobbyStatus('Please enter a game code or invitation link.'); return; }
-    myName = nameInput.value.trim() || 'Player 2';
-    localStorage.setItem('jcf_name', myName);
+  function joinAsGuest(){
     isHost = false;
     myColor = 'yellow'; oppColor = 'red';
-    joinBtn.disabled = true;
-    lastJoinCode = code;
-    joinRetriesLeft = 2; // long-distance / mobile-data connections can need a couple of tries to punch through NAT
-    attemptJoin(code);
-  });
-
-  function attemptJoin(code){
-    setLobbyStatus('Connecting... (this can take up to 45s on mobile data)');
-
     peer = new Peer(undefined, PEER_OPTIONS);
     peer.on('open', () => {
-      conn = peer.connect(code, {
-        reliable: true,
-        serialization: 'json'
-      });
+      conn = peer.connect(ROOM_ID, { reliable: true, serialization: 'json' });
 
-      // 45s instead of 25s: mobile-data <-> wifi connections across distant
-      // cities take much longer to gather and check TURN relay candidates.
       connectionTimer = setTimeout(() => {
         if(!conn || !conn.open){
           try { conn && conn.close(); } catch(e) {}
           try { peer && peer.destroy(); } catch(e) {}
-          if(joinRetriesLeft > 0){
-            joinRetriesLeft--;
-            setLobbyStatus('Still connecting, retrying...');
-            attemptJoin(code);
-          } else {
-            failConnection('Connection timed out. Ask them to double check the link is still open, and both try again.');
-          }
+          failConnection('Still trying to connect...');
         }
       }, 45000);
 
@@ -1023,33 +931,22 @@
         setupConnection();
         conn.send({ type: 'hello', name: myName });
       });
-      conn.on('error', (err) => {
+      conn.on('error', () => {
         clearConnectionTimer();
         try { peer && peer.destroy(); } catch(e) {}
-        if(joinRetriesLeft > 0){
-          joinRetriesLeft--;
-          setLobbyStatus('Connection hiccup, retrying...');
-          attemptJoin(code);
-        } else {
-          failConnection('Could not connect to that game (' + (err && err.type ? err.type : 'network error') + '). Check the link and try again.');
-        }
+        failConnection('Connection hiccup, retrying...');
       });
     });
     peer.on('disconnected', () => {
-      setLobbyStatus('Connection server disconnected. Reconnecting...');
       try { peer.reconnect(); } catch(e) {}
     });
-    peer.on('error', (err) => {
+    peer.on('error', () => {
       clearConnectionTimer();
-      if(joinRetriesLeft > 0 && (gameEl.style.display !== 'block')){
-        joinRetriesLeft--;
-        setLobbyStatus('Connection hiccup, retrying...');
-        setTimeout(() => attemptJoin(code), 800);
-      } else {
-        failConnection('Connection error: ' + (err.type || 'unknown') + '. Check the game link and try again.');
-      }
+      failConnection('Connection hiccup, retrying...');
     });
   }
+
+  startAutoConnect();
 
   function setupConnection(){
     clearConnectionTimer();
