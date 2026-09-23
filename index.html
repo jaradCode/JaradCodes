@@ -862,11 +862,20 @@
     overallBoard.textContent = 'Overall — You: ' + overallScore.me + ' · Opponent: ' + overallScore.them;
   }
 
+  // Several STUN servers for redundancy + multiple independent TURN
+  // relays (UDP, TCP and TLS variants). Mobile-data <-> wifi connections
+  // between distant cities almost always sit behind symmetric NAT/carrier
+  // firewalls, so a real TURN relay (not just STUN) is required for the
+  // connection to succeed at all — this is what was missing before.
   const PEER_OPTIONS = {
     debug: 1,
     config: {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
         { urls: 'stun:openrelay.metered.ca:80' },
         {
           urls: 'turn:openrelay.metered.ca:80',
@@ -889,11 +898,14 @@
           credential: 'openrelayproject'
         }
       ],
+      iceCandidatePoolSize: 10,
       sdpSemantics: 'unified-plan'
     }
   };
 
   let connectionTimer = null;
+  let joinRetriesLeft = 0;
+  let lastJoinCode = '';
 
   function normalizeRoomCode(value){
     let code = String(value || '').trim();
@@ -975,7 +987,13 @@
     isHost = false;
     myColor = 'yellow'; oppColor = 'red';
     joinBtn.disabled = true;
-    setLobbyStatus('Connecting...');
+    lastJoinCode = code;
+    joinRetriesLeft = 2; // long-distance / mobile-data connections can need a couple of tries to punch through NAT
+    attemptJoin(code);
+  });
+
+  function attemptJoin(code){
+    setLobbyStatus('Connecting... (this can take up to 45s on mobile data)');
 
     peer = new Peer(undefined, PEER_OPTIONS);
     peer.on('open', () => {
@@ -984,12 +1002,21 @@
         serialization: 'json'
       });
 
+      // 45s instead of 25s: mobile-data <-> wifi connections across distant
+      // cities take much longer to gather and check TURN relay candidates.
       connectionTimer = setTimeout(() => {
         if(!conn || !conn.open){
           try { conn && conn.close(); } catch(e) {}
-          failConnection('Connection timed out. Both players should try again with a fresh game link.');
+          try { peer && peer.destroy(); } catch(e) {}
+          if(joinRetriesLeft > 0){
+            joinRetriesLeft--;
+            setLobbyStatus('Still connecting, retrying...');
+            attemptJoin(code);
+          } else {
+            failConnection('Connection timed out. Ask them to double check the link is still open, and both try again.');
+          }
         }
-      }, 25000);
+      }, 45000);
 
       conn.on('open', () => {
         clearConnectionTimer();
@@ -997,7 +1024,15 @@
         conn.send({ type: 'hello', name: myName });
       });
       conn.on('error', (err) => {
-        failConnection('Could not connect to that game (' + (err && err.type ? err.type : 'network error') + '). Check the link and try again.');
+        clearConnectionTimer();
+        try { peer && peer.destroy(); } catch(e) {}
+        if(joinRetriesLeft > 0){
+          joinRetriesLeft--;
+          setLobbyStatus('Connection hiccup, retrying...');
+          attemptJoin(code);
+        } else {
+          failConnection('Could not connect to that game (' + (err && err.type ? err.type : 'network error') + '). Check the link and try again.');
+        }
       });
     });
     peer.on('disconnected', () => {
@@ -1005,9 +1040,16 @@
       try { peer.reconnect(); } catch(e) {}
     });
     peer.on('error', (err) => {
-      failConnection('Connection error: ' + (err.type || 'unknown') + '. Check the game link and try again.');
+      clearConnectionTimer();
+      if(joinRetriesLeft > 0 && (gameEl.style.display !== 'block')){
+        joinRetriesLeft--;
+        setLobbyStatus('Connection hiccup, retrying...');
+        setTimeout(() => attemptJoin(code), 800);
+      } else {
+        failConnection('Connection error: ' + (err.type || 'unknown') + '. Check the game link and try again.');
+      }
     });
-  });
+  }
 
   function setupConnection(){
     clearConnectionTimer();
